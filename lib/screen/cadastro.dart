@@ -69,6 +69,14 @@ class _SignupPageState extends State<SignupPage> {
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
                 const Text(
+                  "Olá, Motorista!",
+                  style: TextStyle(
+                    color: Colors.orange,
+                    fontSize: 32,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const Text(
                   "Criar Conta",
                   style: TextStyle(
                     color: Colors.black87,
