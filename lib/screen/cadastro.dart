@@ -122,17 +122,25 @@ class _SignupPageState extends State<SignupPage> {
         fotoUrl = await _uploadFoto(userId);
       }
 
+      String dataFormatada = _nascimentoController.text;
+      final partes = dataFormatada.split('/');
+      final dataPostgres = "${partes[2]}-${partes[1]}-${partes[0]}";
+
       // 3. Inserir dados na tabela
       await supabase.from("Usuario_Caminhoneiro").insert({
-        "id_auth": userId,
+        "id": userId,
         "email": _emailController.text.trim(),
         "nome": _nomeController.text.trim(),
         "sobrenome": _sobrenomeController.text.trim(),
-        "cpf_cnpj": _cpfController.text.trim(),
-        "data_nascimento": _nascimentoController.text.trim(),
-        "telefone": _telefoneController.text.trim(),
+        "cpf_cnpj": int.parse(
+          _cpfController.text.replaceAll(RegExp(r'\D'), ''),
+        ),
+        "data_nascimento": dataPostgres,
+        "telefone": int.parse(
+          _telefoneController.text.replaceAll(RegExp(r'\D'), ''),
+        ),
         "genero": _generoSelecionado,
-        "foto_url": fotoUrl, // pode ser null
+        "foto_url": fotoUrl,
       });
 
       if (mounted) {
