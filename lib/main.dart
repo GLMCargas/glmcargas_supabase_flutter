@@ -3,7 +3,7 @@ import 'package:app/screen/homePage.dart';
 import 'package:app/screen/login.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
-
+import 'package:app/cadastro/cadastro_dados_pessoais.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -26,7 +26,7 @@ class MyApp extends StatelessWidget {
       initialRoute: '/login',
       routes: {
         '/login': (context) => const LoginPage(),
-        '/signup': (context) => const SignupPage(),
+        '/cadastroMotorista': (_) => const CadastroDadosPessoaisScreen(),
         '/home': (context) => const HomePage(),
       },
       // optional fallback home (initialRoute takes precedence)

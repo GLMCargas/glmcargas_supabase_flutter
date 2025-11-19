@@ -194,12 +194,7 @@ class _LoginPageState extends State<LoginPage> {
                     // Link de cadastro
                     TextButton(
                       onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const SignupPage(),
-                          ),
-                        );
+                        Navigator.pushNamed(context, '/cadastroMotorista');
                       },
                       child: const Text.rich(
                         TextSpan(
