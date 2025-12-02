@@ -36,9 +36,7 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
     if (_formKey.currentState!.validate()) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => const CadastroTipoVeiculoScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const CadastroTipoVeiculoScreen()),
       );
     }
   }
@@ -62,21 +60,15 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
                       const Text(
                         'Endereço',
                         style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 4),
-                      const Text(
-                        'Complete com os dados do seu endereço',
-                      ),
+                      const Text('Complete com os dados do seu endereço'),
                       const SizedBox(height: 24),
-                      _CampoTexto(
-                        label: 'CEP: *',
-                        controller: _cepController,
-                      ),
-                      _CampoTexto(
-                        label: 'Rua: *',
-                        controller: _ruaController,
-                      ),
+                      _CampoTexto(label: 'CEP: *', controller: _cepController),
+                      _CampoTexto(label: 'Rua: *', controller: _ruaController),
                       _CampoTexto(
                         label: 'Bairro: *',
                         controller: _bairroController,
@@ -119,11 +111,7 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
                         ],
                       ),
                       const SizedBox(height: 40),
-                      const Text(
-                        'Cadastre seu veículo',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold),
-                      ),
+
                       const SizedBox(height: 16),
                       Align(
                         alignment: Alignment.bottomRight,
@@ -164,7 +152,8 @@ class _CampoTexto extends StatelessWidget {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
-        validator: validatorOverride ??
+        validator:
+            validatorOverride ??
             (value) =>
                 (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
         decoration: InputDecoration(
@@ -220,13 +209,12 @@ class _TopoLogoBase extends StatelessWidget {
               SizedBox(width: 4),
               Text(
                 'GLM',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: kPrimaryColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryColor,
+                ),
               ),
-              Text(
-                'CARGAS',
-                style: TextStyle(color: kPrimaryColor),
-              ),
+              Text('CARGAS', style: TextStyle(color: kPrimaryColor)),
             ],
           ),
           const Spacer(),
@@ -240,8 +228,7 @@ class _TopoLogoBase extends StatelessWidget {
 class _BotaoSetaGrandeBase extends StatelessWidget {
   final VoidCallback onTap;
 
-  const _BotaoSetaGrandeBase({Key? key, required this.onTap})
-      : super(key: key);
+  const _BotaoSetaGrandeBase({Key? key, required this.onTap}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {

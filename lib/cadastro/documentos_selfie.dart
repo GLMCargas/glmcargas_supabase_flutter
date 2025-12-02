@@ -9,9 +9,7 @@ class DocumentosSelfieScreen extends StatelessWidget {
     // aqui também poderia abrir a câmera antes
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const CadastroConcluidoScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const CadastroConcluidoScreen()),
     );
   }
 
@@ -22,7 +20,6 @@ class DocumentosSelfieScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const _TopoLogo(),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -33,18 +30,20 @@ class DocumentosSelfieScreen extends StatelessWidget {
                       child: Text(
                         'Documentos',
                         style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Center(
-                      child: Text('Tire uma foto sua'),
-                    ),
+                    const Center(child: Text('Tire uma foto sua')),
                     const SizedBox(height: 24),
                     const Text(
                       'Dicas para a selfie',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text('✓ Esteja em um lugar iluminado'),

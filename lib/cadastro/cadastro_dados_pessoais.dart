@@ -1,4 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart'
+    show MaskTextInputFormatter;
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cadastro_endereco.dart';
 
 const Color kBackgroundColor = Color(0xFFFBD5B8);
@@ -17,24 +24,89 @@ class _CadastroDadosPessoaisScreenState
   final _formKey = GlobalKey<FormState>();
 
   final _emailController = TextEditingController();
+  final _passwordController = TextEditingController();
   final _nomeController = TextEditingController();
   final _sobrenomeController = TextEditingController();
-  final _cpfCnpjController = TextEditingController();
-  final _dataNascController = TextEditingController();
+  final _cpfController = TextEditingController();
+  final _nascimentoController = TextEditingController();
   final _telefoneController = TextEditingController();
-  final _senhaController = TextEditingController();
 
   String? _genero;
+
+  final cpfMask = MaskTextInputFormatter(
+    mask: "###.###.###-##",
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+  final cnpjMask = MaskTextInputFormatter(
+    mask: "##.###.###/####-##",
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+  final telefoneMask = MaskTextInputFormatter(
+    mask: "(##) #####-####",
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+  final dataMask = MaskTextInputFormatter(
+    mask: "##/##/####",
+    filter: {"#": RegExp(r'[0-9]')},
+  );
+
+  bool usandoCnpj = false;
+  bool _isLoading = false;
+  bool _obscurePassword = true;
+
+  File? _fotoSelecionada;
+
+  String? _generoSelecionado;
+
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _selecionarFoto() async {
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (pickedFile != null) {
+      setState(() {
+        _fotoSelecionada = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<String?> _uploadFoto(String userId) async {
+    if (_fotoSelecionada == null) return null;
+
+    final supabase = Supabase.instance.client;
+    final fileBytes = await _fotoSelecionada!.readAsBytes();
+
+    final filePath = "motoristas/$userId.jpg";
+
+    await supabase.storage
+        .from("fotos_motoristas")
+        .uploadBinary(
+          filePath,
+          fileBytes,
+          fileOptions: const FileOptions(
+            contentType: "image/jpeg",
+            upsert: true,
+          ),
+        );
+
+    final url = supabase.storage
+        .from("fotos_motoristas")
+        .getPublicUrl(filePath);
+
+    return url;
+  }
 
   @override
   void dispose() {
     _emailController.dispose();
     _nomeController.dispose();
     _sobrenomeController.dispose();
-    _cpfCnpjController.dispose();
-    _dataNascController.dispose();
+    _cpfController.dispose();
+    _nascimentoController.dispose();
     _telefoneController.dispose();
-    _senhaController.dispose();
     super.dispose();
   }
 
@@ -43,11 +115,94 @@ class _CadastroDadosPessoaisScreenState
       // aqui você pode guardar os dados em algum modelo/global se quiser
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => const CadastroEnderecoScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
       );
     }
+  }
+
+  Future<void> _signUp() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    if (_generoSelecionado == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Selecione um gênero.")));
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // 1. Criar usuário
+      final response = await supabase.auth.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      if (response.user == null) throw "Erro ao criar usuário.";
+
+      final userId = response.user!.id;
+
+      // 2. Upload da foto (opcional)
+      String? fotoUrl;
+      if (_fotoSelecionada != null) {
+        fotoUrl = await _uploadFoto(userId);
+      }
+
+      // 3. Inserir dados na tabela
+      await supabase.from("Usuario_Caminhoneiro").insert({
+        "id_auth": userId,
+        "email": _emailController.text.trim(),
+        "nome": _nomeController.text.trim(),
+        "sobrenome": _sobrenomeController.text.trim(),
+        "cpf_cnpj": _cpfController.text.trim(),
+        "data_nascimento": _nascimentoController.text.trim(),
+        "telefone": _telefoneController.text.trim(),
+        "genero": _generoSelecionado,
+        "foto_url": fotoUrl, // pode ser null
+      });
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cadastro realizado com sucesso!")),
+        );
+        Navigator.pushReplacementNamed(context, "/login");
+      }
+    } catch (e) {
+      String mensagemErro = "Erro ao cadastrar. Tente novamente.";
+
+      // Detecta erro de usuário já existente (422)
+      if (e.toString().contains("422") ||
+          e.toString().toLowerCase().contains("already registered") ||
+          e.toString().toLowerCase().contains("user already exists")) {
+        mensagemErro = "Este email já está cadastrado. Tente fazer login.";
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(mensagemErro), backgroundColor: Colors.red),
+      );
+    }
+  }
+
+  Widget _campo(
+    String label,
+    TextEditingController controller, {
+    TextInputFormatter? mask,
+    TextInputType type = TextInputType.text,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: type,
+      inputFormatters: mask != null ? [mask] : null,
+      validator: (value) =>
+          (value == null || value.isEmpty) ? "Campo obrigatório" : null,
+      decoration: InputDecoration(
+        labelText: "$label *",
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
+    );
   }
 
   @override
@@ -66,31 +221,27 @@ class _CadastroDadosPessoaisScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // avatar
                       Center(
-                        child: Stack(
+                        child: Column(
                           children: [
-                            const CircleAvatar(
-                              radius: 45,
-                              backgroundColor: Colors.grey,
-                              child: Icon(Icons.person, size: 50),
-                            ),
-                            Positioned(
-                              right: 0,
-                              bottom: 0,
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  color: Colors.black,
-                                  shape: BoxShape.circle,
-                                ),
-                                padding: const EdgeInsets.all(3),
-                                child: const Icon(
-                                  Icons.add,
-                                  size: 16,
-                                  color: Colors.white,
-                                ),
+                            GestureDetector(
+                              onTap: _selecionarFoto,
+                              child: CircleAvatar(
+                                radius: 55,
+                                backgroundImage: _fotoSelecionada != null
+                                    ? FileImage(_fotoSelecionada!)
+                                    : null,
+                                child: _fotoSelecionada == null
+                                    ? const Icon(Icons.add_a_photo, size: 30)
+                                    : null,
                               ),
                             ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              "Adicionar foto",
+                              style: TextStyle(color: Colors.orange),
+                            ),
+                            const SizedBox(height: 20),
                           ],
                         ),
                       ),
@@ -99,7 +250,9 @@ class _CadastroDadosPessoaisScreenState
                         child: Text(
                           'Olá, Motorista !',
                           style: TextStyle(
-                              fontSize: 22, fontWeight: FontWeight.bold),
+                            fontSize: 22,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -107,7 +260,9 @@ class _CadastroDadosPessoaisScreenState
                         child: Text(
                           'Criar conta',
                           style: TextStyle(
-                              fontSize: 20, fontWeight: FontWeight.bold),
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                       const SizedBox(height: 4),
@@ -133,11 +288,11 @@ class _CadastroDadosPessoaisScreenState
                       ),
                       _CampoTexto(
                         label: 'CPF/CNPJ: *',
-                        controller: _cpfCnpjController,
+                        controller: _cpfController,
                       ),
                       _CampoTexto(
                         label: 'Data de Nascimento: *',
-                        controller: _dataNascController,
+                        controller: _nascimentoController,
                         keyboardType: TextInputType.datetime,
                       ),
                       _CampoTexto(
@@ -145,11 +300,27 @@ class _CadastroDadosPessoaisScreenState
                         controller: _telefoneController,
                         keyboardType: TextInputType.phone,
                       ),
-                      _CampoTexto(
-                        label: 'Senha: *',
-                        controller: _senhaController,
-                        obscureText: true,
-                        suffixIcon: const Icon(Icons.visibility),
+                      TextFormField(
+                        controller: _passwordController,
+                        obscureText: _obscurePassword,
+                        validator: (v) =>
+                            v == null || v.isEmpty ? "Campo obrigatório" : null,
+                        decoration: InputDecoration(
+                          labelText: "Senha *",
+                          border: OutlineInputBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              _obscurePassword
+                                  ? Icons.visibility_off
+                                  : Icons.visibility,
+                            ),
+                            onPressed: () => setState(
+                              () => _obscurePassword = !_obscurePassword,
+                            ),
+                          ),
+                        ),
                       ),
                       const SizedBox(height: 16),
                       const Text(
@@ -180,7 +351,10 @@ class _CadastroDadosPessoaisScreenState
                       const SizedBox(height: 24),
                       Align(
                         alignment: Alignment.bottomRight,
-                        child: _BotaoSetaGrande(onTap: _proximo),
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: _BotaoSetaGrande(onTap: _proximo),
+                        ),
                       ),
                     ],
                   ),
@@ -213,21 +387,18 @@ class _TopoLogo extends StatelessWidget {
               SizedBox(width: 4),
               Text(
                 'GLM',
-                style:
-                    TextStyle(fontWeight: FontWeight.bold, color: kPrimaryColor),
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: kPrimaryColor,
+                ),
               ),
-              Text(
-                'CARGAS',
-                style: TextStyle(color: kPrimaryColor),
-              ),
+              Text('CARGAS', style: TextStyle(color: kPrimaryColor)),
             ],
           ),
           const Spacer(),
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
-            children: const [
-              Icon(Icons.menu, size: 28),
-            ],
+            children: const [Icon(Icons.menu, size: 28)],
           ),
         ],
       ),
@@ -292,10 +463,7 @@ class _BotaoSetaGrande extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: const [
-          CircleAvatar(
-            radius: 6,
-            backgroundColor: kPrimaryColor,
-          ),
+          CircleAvatar(radius: 6, backgroundColor: kPrimaryColor),
           SizedBox(width: 4),
           Icon(Icons.play_arrow, size: 40, color: kPrimaryColor),
           SizedBox(width: 4),

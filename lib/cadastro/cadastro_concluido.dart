@@ -5,11 +5,7 @@ class CadastroConcluidoScreen extends StatelessWidget {
   const CadastroConcluidoScreen({Key? key}) : super(key: key);
 
   void _voltarLogin(BuildContext context) {
-    Navigator.pushNamedAndRemoveUntil(
-      context,
-      '/login',
-      (route) => false,
-    );
+    Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
   @override
@@ -19,7 +15,6 @@ class CadastroConcluidoScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const _TopoLogo(),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -34,8 +29,10 @@ class CadastroConcluidoScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     const Text(
                       'Cadastro completo!',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 8),
                     const Text(

@@ -10,6 +10,38 @@ class CadastroTipoCarroceriaScreen extends StatefulWidget {
       _CadastroTipoCarroceriaScreenState();
 }
 
+class _BotaoSetaGrandeBase extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BotaoSetaGrandeBase({Key? key, required this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          CircleAvatar(radius: 6, backgroundColor: kPrimaryColor),
+          SizedBox(width: 4),
+          Icon(Icons.play_arrow, size: 40, color: kPrimaryColor),
+          SizedBox(width: 4),
+          Icon(Icons.play_arrow, size: 50, color: Color(0xFFFFC89C)),
+        ],
+      ),
+    );
+  }
+}
+
+class _BotaoSetaGrande extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BotaoSetaGrande({Key? key, required this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => _BotaoSetaGrandeBase(onTap: onTap);
+}
+
 class _CadastroTipoCarroceriaScreenState
     extends State<CadastroTipoCarroceriaScreen> {
   String? _carroceria;
@@ -23,9 +55,7 @@ class _CadastroTipoCarroceriaScreenState
     }
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const CadastroPlacaRntrcScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const CadastroPlacaRntrcScreen()),
     );
   }
 
@@ -46,7 +76,6 @@ class _CadastroTipoCarroceriaScreenState
       body: SafeArea(
         child: Column(
           children: [
-            const _TopoLogo(),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -57,34 +86,46 @@ class _CadastroTipoCarroceriaScreenState
                       child: Text(
                         'Cadastro de veículo',
                         style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
-                    const Center(
-                      child: Text('Selecione o tipo de carroceria'),
-                    ),
+                    const Center(child: Text('Selecione o tipo de carroceria')),
                     const SizedBox(height: 24),
-                    const Text('Fechadas',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Fechadas',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     _radio('Baú'),
                     _radio('Baú Frigorífico'),
                     _radio('Baú Refrigerado'),
                     _radio('Sider'),
                     const SizedBox(height: 12),
-                    const Text('Abertas',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Abertas',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     _radio('Caçamba'),
                     _radio('Grade Baixa'),
                     _radio('Graneleiro'),
                     _radio('Plataforma'),
                     _radio('Prancha'),
                     const SizedBox(height: 12),
-                    const Text('Especiais',
-                        style: TextStyle(
-                            fontSize: 18, fontWeight: FontWeight.bold)),
+                    const Text(
+                      'Especiais',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
                     _radio('Apenas Cavalo'),
                     _radio('Bug Porta Container'),
                     _radio('Cavaqueira'),
@@ -95,6 +136,7 @@ class _CadastroTipoCarroceriaScreenState
                     _radio('Silo'),
                     _radio('Tanque'),
                     const SizedBox(height: 24),
+                    Align(alignment: Alignment.bottomRight),
                     Align(
                       alignment: Alignment.bottomRight,
                       child: _BotaoSetaGrande(onTap: _proximo),

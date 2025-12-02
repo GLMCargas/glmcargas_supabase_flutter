@@ -9,9 +9,7 @@ class DocumentosCnhScreen extends StatelessWidget {
     // aqui você pode chamar a câmera antes de ir pra próxima tela
     Navigator.push(
       context,
-      MaterialPageRoute(
-        builder: (_) => const DocumentosSelfieScreen(),
-      ),
+      MaterialPageRoute(builder: (_) => const DocumentosSelfieScreen()),
     );
   }
 
@@ -22,7 +20,6 @@ class DocumentosCnhScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const _TopoLogo(),
             Expanded(
               child: Padding(
                 padding: const EdgeInsets.all(16),
@@ -33,7 +30,9 @@ class DocumentosCnhScreen extends StatelessWidget {
                       child: Text(
                         'Documentos',
                         style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ),
                     const SizedBox(height: 4),
@@ -43,8 +42,10 @@ class DocumentosCnhScreen extends StatelessWidget {
                     const SizedBox(height: 24),
                     const Text(
                       'Siga as instruções de envio',
-                      style:
-                          TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                     const SizedBox(height: 16),
                     const Text('✓ Documento fora do plástico e aberto'),

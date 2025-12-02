@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'cadastro_dados_pessoais.dart';
 import 'documentos_cnh.dart';
 
@@ -8,6 +9,38 @@ class CadastroPlacaRntrcScreen extends StatefulWidget {
   @override
   State<CadastroPlacaRntrcScreen> createState() =>
       _CadastroPlacaRntrcScreenState();
+}
+
+class _BotaoSetaGrandeBase extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BotaoSetaGrandeBase({Key? key, required this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          CircleAvatar(radius: 6, backgroundColor: kPrimaryColor),
+          SizedBox(width: 4),
+          Icon(Icons.play_arrow, size: 40, color: kPrimaryColor),
+          SizedBox(width: 4),
+          Icon(Icons.play_arrow, size: 50, color: Color(0xFFFFC89C)),
+        ],
+      ),
+    );
+  }
+}
+
+class _BotaoSetaGrande extends StatelessWidget {
+  final VoidCallback onTap;
+
+  const _BotaoSetaGrande({Key? key, required this.onTap}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) => _BotaoSetaGrandeBase(onTap: onTap);
 }
 
 class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
@@ -26,9 +59,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
     if (_formKey.currentState!.validate()) {
       Navigator.push(
         context,
-        MaterialPageRoute(
-          builder: (_) => const DocumentosCnhScreen(),
-        ),
+        MaterialPageRoute(builder: (_) => const DocumentosCnhScreen()),
       );
     }
   }
@@ -40,7 +71,6 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
       body: SafeArea(
         child: Column(
           children: [
-            const _TopoLogo(),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -51,7 +81,9 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                       const Text(
                         'Cadastro de veículo',
                         style: TextStyle(
-                            fontSize: 24, fontWeight: FontWeight.bold),
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                       const SizedBox(height: 4),
                       const Text('Digite a placa e o RNTRC do veículo'),
@@ -65,27 +97,47 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                         controller: _rntrcController,
                       ),
                       const SizedBox(height: 24),
-                      Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(
-                          color: Colors.grey.shade300,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: const Text.rich(
-                          TextSpan(
-                            children: [
-                              WidgetSpan(
-                                child: Icon(Icons.info_outline, size: 18),
-                              ),
-                              WidgetSpan(child: SizedBox(width: 6)),
-                              TextSpan(
+                      GestureDetector(
+                        onTap: () async {
+                          final url = Uri.parse(
+                            'https://consultas.antt.gov.br/…',
+                          );
+                          if (await canLaunchUrl(url)) {
+                            await launchUrl(
+                              url,
+                              mode: LaunchMode.externalApplication,
+                            );
+                          }
+                        },
+                        child: Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade300,
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Text.rich(
+                            TextSpan(
+                              children: [
+                                const WidgetSpan(
+                                  child: Icon(Icons.info_outline, size: 18),
+                                ),
+                                const WidgetSpan(child: SizedBox(width: 6)),
+                                TextSpan(
                                   text:
-                                      'Veja aqui onde encontrar o número do RNTRC'),
-                            ],
+                                      'Veja aqui onde encontrar o número do RNTRC',
+                                  style: TextStyle(
+                                    color: Colors.blue.shade700,
+                                    decoration: TextDecoration.underline,
+                                    fontWeight: FontWeight.w500,
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                       const SizedBox(height: 24),
+                      Align(alignment: Alignment.bottomRight),
                       Align(
                         alignment: Alignment.bottomRight,
                         child: _BotaoSetaGrande(onTap: _proximo),
@@ -106,11 +158,8 @@ class _CampoTexto extends StatelessWidget {
   final String label;
   final TextEditingController controller;
 
-  const _CampoTexto({
-    Key? key,
-    required this.label,
-    required this.controller,
-  }) : super(key: key);
+  const _CampoTexto({Key? key, required this.label, required this.controller})
+    : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -118,8 +167,7 @@ class _CampoTexto extends StatelessWidget {
       padding: const EdgeInsets.only(bottom: 12.0),
       child: TextFormField(
         controller: controller,
-        validator: (v) =>
-            (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
+        validator: (v) => (v == null || v.isEmpty) ? 'Campo obrigatório' : null,
         decoration: InputDecoration(
           labelText: label,
           filled: true,
