@@ -1,5 +1,4 @@
 import 'dart:io';
-
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -37,27 +36,21 @@ class _CadastroDadosPessoaisScreenState
     mask: "###.###.###-##",
     filter: {"#": RegExp(r'[0-9]')},
   );
-  final cnpjMask = MaskTextInputFormatter(
-    mask: "##.###.###/####-##",
-    filter: {"#": RegExp(r'[0-9]')},
-  );
+
   final telefoneMask = MaskTextInputFormatter(
     mask: "(##) #####-####",
     filter: {"#": RegExp(r'[0-9]')},
   );
+
   final dataMask = MaskTextInputFormatter(
     mask: "##/##/####",
     filter: {"#": RegExp(r'[0-9]')},
   );
 
-  bool usandoCnpj = false;
-  bool _isLoading = false;
   bool _obscurePassword = true;
+  bool _isLoading = false;
 
   File? _fotoSelecionada;
-
-  String? _generoSelecionado;
-
   final ImagePicker _picker = ImagePicker();
 
   Future<void> _selecionarFoto() async {
@@ -92,11 +85,16 @@ class _CadastroDadosPessoaisScreenState
           ),
         );
 
-    final url = supabase.storage
-        .from("fotos_motoristas")
-        .getPublicUrl(filePath);
+    return supabase.storage.from("fotos_motoristas").getPublicUrl(filePath);
+  }
 
-    return url;
+  void _proximo() {
+    if (_formKey.currentState!.validate()) {
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
+      );
+    }
   }
 
   @override
@@ -110,101 +108,6 @@ class _CadastroDadosPessoaisScreenState
     super.dispose();
   }
 
-  void _proximo() {
-    if (_formKey.currentState!.validate()) {
-      // aqui você pode guardar os dados em algum modelo/global se quiser
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
-      );
-    }
-  }
-
-  Future<void> _signUp() async {
-    if (!_formKey.currentState!.validate()) return;
-
-    if (_generoSelecionado == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Selecione um gênero.")));
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final supabase = Supabase.instance.client;
-
-      // 1. Criar usuário
-      final response = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      if (response.user == null) throw "Erro ao criar usuário.";
-
-      final userId = response.user!.id;
-
-      // 2. Upload da foto (opcional)
-      String? fotoUrl;
-      if (_fotoSelecionada != null) {
-        fotoUrl = await _uploadFoto(userId);
-      }
-
-      // 3. Inserir dados na tabela
-      await supabase.from("Usuario_Caminhoneiro").insert({
-        "id_auth": userId,
-        "email": _emailController.text.trim(),
-        "nome": _nomeController.text.trim(),
-        "sobrenome": _sobrenomeController.text.trim(),
-        "cpf_cnpj": _cpfController.text.trim(),
-        "data_nascimento": _nascimentoController.text.trim(),
-        "telefone": _telefoneController.text.trim(),
-        "genero": _generoSelecionado,
-        "foto_url": fotoUrl, // pode ser null
-      });
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cadastro realizado com sucesso!")),
-        );
-        Navigator.pushReplacementNamed(context, "/login");
-      }
-    } catch (e) {
-      String mensagemErro = "Erro ao cadastrar. Tente novamente.";
-
-      // Detecta erro de usuário já existente (422)
-      if (e.toString().contains("422") ||
-          e.toString().toLowerCase().contains("already registered") ||
-          e.toString().toLowerCase().contains("user already exists")) {
-        mensagemErro = "Este email já está cadastrado. Tente fazer login.";
-      }
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(mensagemErro), backgroundColor: Colors.red),
-      );
-    }
-  }
-
-  Widget _campo(
-    String label,
-    TextEditingController controller, {
-    TextInputFormatter? mask,
-    TextInputType type = TextInputType.text,
-  }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: type,
-      inputFormatters: mask != null ? [mask] : null,
-      validator: (value) =>
-          (value == null || value.isEmpty) ? "Campo obrigatório" : null,
-      decoration: InputDecoration(
-        labelText: "$label *",
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -212,7 +115,7 @@ class _CadastroDadosPessoaisScreenState
       body: SafeArea(
         child: Column(
           children: [
-            const _TopoLogo(),
+            const _TopoLogo(), // FICA FIXO
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.all(16),
@@ -221,30 +124,6 @@ class _CadastroDadosPessoaisScreenState
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Center(
-                        child: Column(
-                          children: [
-                            GestureDetector(
-                              onTap: _selecionarFoto,
-                              child: CircleAvatar(
-                                radius: 55,
-                                backgroundImage: _fotoSelecionada != null
-                                    ? FileImage(_fotoSelecionada!)
-                                    : null,
-                                child: _fotoSelecionada == null
-                                    ? const Icon(Icons.add_a_photo, size: 30)
-                                    : null,
-                              ),
-                            ),
-                            const SizedBox(height: 10),
-                            const Text(
-                              "Adicionar foto",
-                              style: TextStyle(color: Colors.orange),
-                            ),
-                            const SizedBox(height: 20),
-                          ],
-                        ),
-                      ),
                       const SizedBox(height: 16),
                       const Center(
                         child: Text(
@@ -265,41 +144,82 @@ class _CadastroDadosPessoaisScreenState
                           ),
                         ),
                       ),
-                      const SizedBox(height: 4),
-                      const Center(
-                        child: Text(
-                          'Complete os dados para criar sua conta',
-                          textAlign: TextAlign.center,
+                      const SizedBox(height: 20),
+
+                      /// FOTO + TEXTO
+                      Center(
+                        child: Column(
+                          children: [
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: _selecionarFoto,
+                                child: CircleAvatar(
+                                  radius: 55,
+                                  backgroundImage: _fotoSelecionada != null
+                                      ? FileImage(_fotoSelecionada!)
+                                      : null,
+                                  child: _fotoSelecionada == null
+                                      ? const Icon(Icons.add_a_photo, size: 30)
+                                      : null,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 10),
+
+                            /// TEXTO CLICÁVEL TAMBÉM
+                            MouseRegion(
+                              cursor: SystemMouseCursors.click,
+                              child: GestureDetector(
+                                onTap: _selecionarFoto,
+                                child: const Text(
+                                  "Adicionar foto",
+                                  style: TextStyle(
+                                    color: Colors.orange,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            const Center(
+                              child: Text(
+                                'Complete os dados para criar sua conta',
+                                textAlign: TextAlign.center,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
+
                       const SizedBox(height: 24),
+
                       _CampoTexto(
-                        label: 'Email: *',
+                        label: 'Email:',
                         controller: _emailController,
                         keyboardType: TextInputType.emailAddress,
                       ),
+                      _CampoTexto(label: 'Nome:', controller: _nomeController),
                       _CampoTexto(
-                        label: 'Nome: *',
-                        controller: _nomeController,
-                      ),
-                      _CampoTexto(
-                        label: 'Sobrenome: *',
+                        label: 'Sobrenome:',
                         controller: _sobrenomeController,
                       ),
                       _CampoTexto(
-                        label: 'CPF/CNPJ: *',
+                        label: 'CPF/CNPJ:',
                         controller: _cpfController,
                       ),
                       _CampoTexto(
-                        label: 'Data de Nascimento: *',
+                        label: 'Data de Nascimento:',
                         controller: _nascimentoController,
                         keyboardType: TextInputType.datetime,
                       ),
                       _CampoTexto(
-                        label: 'Telefone: *',
+                        label: 'Telefone:',
                         controller: _telefoneController,
                         keyboardType: TextInputType.phone,
                       ),
+
                       TextFormField(
                         controller: _passwordController,
                         obscureText: _obscurePassword,
@@ -322,7 +242,9 @@ class _CadastroDadosPessoaisScreenState
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 16),
+
                       const Text(
                         'Com qual gênero você se identifica?',
                         style: TextStyle(fontSize: 16),
@@ -348,7 +270,9 @@ class _CadastroDadosPessoaisScreenState
                         title: const Text('Prefiro não informar'),
                         onChanged: (v) => setState(() => _genero = v),
                       ),
+
                       const SizedBox(height: 24),
+
                       Align(
                         alignment: Alignment.bottomRight,
                         child: MouseRegion(
@@ -368,7 +292,6 @@ class _CadastroDadosPessoaisScreenState
   }
 }
 
-/// topo com logo e menu igual às telas
 class _TopoLogo extends StatelessWidget {
   const _TopoLogo({Key? key}) : super(key: key);
 
@@ -380,7 +303,6 @@ class _TopoLogo extends StatelessWidget {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Row(
         children: [
-          // logo fake
           Row(
             children: const [
               Icon(Icons.local_shipping, color: kPrimaryColor),
@@ -396,10 +318,7 @@ class _TopoLogo extends StatelessWidget {
             ],
           ),
           const Spacer(),
-          Column(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: const [Icon(Icons.menu, size: 28)],
-          ),
+          const Icon(Icons.menu, size: 28),
         ],
       ),
     );
@@ -410,16 +329,12 @@ class _CampoTexto extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final TextInputType? keyboardType;
-  final bool obscureText;
-  final Widget? suffixIcon;
 
   const _CampoTexto({
     Key? key,
     required this.label,
     required this.controller,
     this.keyboardType,
-    this.obscureText = false,
-    this.suffixIcon,
   }) : super(key: key);
 
   @override
@@ -429,11 +344,10 @@ class _CampoTexto extends StatelessWidget {
       child: TextFormField(
         controller: controller,
         keyboardType: keyboardType,
-        obscureText: obscureText,
         validator: (value) =>
             (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
         decoration: InputDecoration(
-          labelText: label,
+          labelText: "$label *",
           filled: true,
           fillColor: kBackgroundColor,
           border: OutlineInputBorder(
@@ -444,7 +358,6 @@ class _CampoTexto extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             borderSide: const BorderSide(color: kPrimaryColor),
           ),
-          suffixIcon: suffixIcon,
         ),
       ),
     );
