@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'cadastro_dados_pessoais.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cadastro_tipo_veiculo.dart';
 
 class CadastroEnderecoScreen extends StatefulWidget {
@@ -20,6 +20,8 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
   final _numeroController = TextEditingController();
   final _complementoController = TextEditingController();
 
+  bool _semNumero = false;
+
   @override
   void dispose() {
     _cepController.dispose();
@@ -32,11 +34,51 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
     super.dispose();
   }
 
-  void _proximo() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CadastroTipoVeiculoScreen()),
+  Future<void> _salvarEndereco() async {
+    if (!_formKey.currentState!.validate()) return;
+
+    final supabase = Supabase.instance.client;
+    final user = supabase.auth.currentUser;
+
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Erro: usuário não autenticado.")),
+      );
+      return;
+    }
+
+    final dados = {
+      "Usuario_CaminhoneiroID": user.id,
+      "CEP": int.tryParse(_cepController.text.replaceAll(RegExp(r'\D'), '')),
+      "Rua": _ruaController.text.trim(),
+      "Bairro": _bairroController.text.trim(),
+      "Cidade": _cidadeController.text.trim(),
+      "UF": _ufController.text.trim(),
+      "Numero": _semNumero
+          ? 0
+          : int.tryParse(
+              _numeroController.text.replaceAll(RegExp(r'[^0-9]'), ''),
+            ),
+      "Complemento": _complementoController.text.trim().isEmpty
+          ? null
+          : _complementoController.text.trim(),
+    };
+
+    try {
+      await supabase.from("Endereço").insert(dados);
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CadastroTipoVeiculoScreen()),
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erro ao salvar: $e"),
+          backgroundColor: Colors.red,
+        ),
       );
     }
   }
@@ -44,205 +86,190 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: kBackgroundColor,
-      body: SafeArea(
-        child: Column(
-          children: [
-            const _TopoLogo(),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.all(16),
-                child: Form(
-                  key: _formKey,
-                  child: Column(
-                    children: [
-                      const SizedBox(height: 8),
-                      const Text(
-                        'Endereço',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      const Text('Complete com os dados do seu endereço'),
-                      const SizedBox(height: 24),
-                      _CampoTexto(label: 'CEP: *', controller: _cepController),
-                      _CampoTexto(label: 'Rua: *', controller: _ruaController),
-                      _CampoTexto(
-                        label: 'Bairro: *',
-                        controller: _bairroController,
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            flex: 3,
-                            child: _CampoTexto(
-                              label: 'Cidade: *',
-                              controller: _cidadeController,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            flex: 1,
-                            child: _CampoTexto(
-                              label: 'UF: *',
-                              controller: _ufController,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Row(
-                        children: [
-                          Expanded(
-                            child: _CampoTexto(
-                              label: 'Número: *',
-                              controller: _numeroController,
-                            ),
-                          ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: _CampoTexto(
-                              label: 'Complemento (opcional):',
-                              controller: _complementoController,
-                              validatorOverride: (_) => null,
-                            ),
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 40),
+      backgroundColor: Colors.orange.shade100, // IGUAL À PÁGINA DE CADASTRO
+      body: Center(
+        child: Container(
+          constraints: const BoxConstraints(maxWidth: 430),
+          decoration: BoxDecoration(
+            color: Colors.white, // IGUAL À OUTRA TELA
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.orange.withOpacity(0.4), // IGUAL
+                blurRadius: 12,
+                offset: const Offset(0, 4),
+              ),
+            ],
+          ),
 
-                      const SizedBox(height: 16),
-                      Align(
-                        alignment: Alignment.bottomRight,
-                        child: _BotaoSetaGrande(onTap: _proximo),
+          child: Column(
+            children: [
+              // 🔶 TOPO IGUAL
+              Container(
+                height: 64,
+                padding: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                ),
+                child: Row(
+                  children: const [
+                    Icon(Icons.local_shipping, color: Colors.orange),
+                    SizedBox(width: 6),
+                    Text(
+                      "GLM",
+                      style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 18,
+                        color: Colors.orange,
                       ),
-                    ],
+                    ),
+                    SizedBox(width: 4),
+                    Text(
+                      "CARGAS",
+                      style: TextStyle(color: Colors.orange, fontSize: 16),
+                    ),
+                    Spacer(),
+                    Icon(Icons.menu, color: Colors.orange, size: 28),
+                  ],
+                ),
+              ),
+
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(24),
+                  child: Form(
+                    key: _formKey,
+                    child: Column(
+                      children: [
+                        const SizedBox(height: 16),
+
+                        const Text(
+                          "Endereço",
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+
+                        const SizedBox(height: 4),
+
+                        const Text(
+                          'Complete com os dados do seu endereço',
+                          textAlign: TextAlign.center,
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        _campo("CEP", _cepController),
+                        _campo("Rua", _ruaController),
+                        _campo("Bairro", _bairroController),
+
+                        Row(
+                          children: [
+                            Expanded(child: _campo("Cidade", _cidadeController)),
+                            const SizedBox(width: 8),
+                            SizedBox(
+                              width: 70,
+                              child: _campo("UF", _ufController),
+                            ),
+                          ],
+                        ),
+
+                        Row(
+                          children: [
+                            Expanded(
+                              child: _campo(
+                                "Número",
+                                _numeroController,
+                                validatorOverride: (v) {
+                                  if (_semNumero) return null;
+                                  return (v == null || v.isEmpty)
+                                      ? "Obrigatório"
+                                      : null;
+                                },
+                              ),
+                            ),
+
+                            Column(
+                              children: [
+                                Checkbox(
+                                  value: _semNumero,
+                                  onChanged: (v) =>
+                                      setState(() => _semNumero = v ?? false),
+                                ),
+                                const Text(
+                                  "Sem número",
+                                  style: TextStyle(fontSize: 12),
+                                )
+                              ],
+                            ),
+                          ],
+                        ),
+
+                        _campo(
+                          "Complemento (opcional)",
+                          _complementoController,
+                          validatorOverride: (_) => null,
+                        ),
+
+                        const SizedBox(height: 20),
+
+                        Align(
+                          alignment: Alignment.centerRight,
+                          child: GestureDetector(
+                            onTap: _salvarEndereco,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                CircleAvatar(
+                                    radius: 6, backgroundColor: Colors.orange),
+                                SizedBox(width: 4),
+                                Icon(Icons.play_arrow,
+                                    size: 40, color: Colors.orange),
+                                SizedBox(width: 4),
+                                Icon(Icons.play_arrow,
+                                    size: 50, color: Color(0xFFFFC89C)),
+                              ],
+                            ),
+                          ),
+                        )
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
-}
 
-// reaproveita os widgets do primeiro arquivo:
-
-class _CampoTexto extends StatelessWidget {
-  final String label;
-  final TextEditingController controller;
-  final TextInputType? keyboardType;
-  final String? Function(String?)? validatorOverride;
-
-  const _CampoTexto({
-    Key? key,
-    required this.label,
-    required this.controller,
-    this.keyboardType,
-    this.validatorOverride,
-  }) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
+  Widget _campo(
+    String label,
+    TextEditingController controller, {
+    String? Function(String?)? validatorOverride,
+  }) {
     return Padding(
-      padding: const EdgeInsets.only(bottom: 12.0),
+      padding: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
         controller: controller,
-        keyboardType: keyboardType,
-        validator:
-            validatorOverride ??
-            (value) =>
-                (value == null || value.isEmpty) ? 'Campo obrigatório' : null,
+        validator: validatorOverride ??
+            (v) => (v == null || v.isEmpty) ? "Campo obrigatório" : null,
         decoration: InputDecoration(
-          labelText: label,
+          labelText: "$label *",
           filled: true,
-          fillColor: kBackgroundColor,
+          fillColor: Colors.orange.shade100, // IGUAL À TELA DE CADASTRO
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: kPrimaryColor),
+            borderSide: const BorderSide(color: Colors.black12),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: kPrimaryColor),
+            borderSide: const BorderSide(color: Colors.black12),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _TopoLogo extends StatelessWidget {
-  const _TopoLogo({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return const _TopoLogoBase();
-  }
-}
-
-class _BotaoSetaGrande extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _BotaoSetaGrande({Key? key, required this.onTap}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) => _BotaoSetaGrandeBase(onTap: onTap);
-}
-
-// para não duplicar, usei estas classes base vindas do primeiro arquivo:
-class _TopoLogoBase extends StatelessWidget {
-  const _TopoLogoBase({Key? key}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      height: 64,
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: Row(
-        children: [
-          Row(
-            children: const [
-              Icon(Icons.local_shipping, color: kPrimaryColor),
-              SizedBox(width: 4),
-              Text(
-                'GLM',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: kPrimaryColor,
-                ),
-              ),
-              Text('CARGAS', style: TextStyle(color: kPrimaryColor)),
-            ],
-          ),
-          const Spacer(),
-          const Icon(Icons.menu, size: 28),
-        ],
-      ),
-    );
-  }
-}
-
-class _BotaoSetaGrandeBase extends StatelessWidget {
-  final VoidCallback onTap;
-
-  const _BotaoSetaGrandeBase({Key? key, required this.onTap}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          CircleAvatar(radius: 6, backgroundColor: kPrimaryColor),
-          SizedBox(width: 4),
-          Icon(Icons.play_arrow, size: 40, color: kPrimaryColor),
-          SizedBox(width: 4),
-          Icon(Icons.play_arrow, size: 50, color: Color(0xFFFFC89C)),
-        ],
       ),
     );
   }

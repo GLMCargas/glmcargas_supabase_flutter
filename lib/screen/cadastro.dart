@@ -97,91 +97,99 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _signUp() async {
-    print("▶️ Iniciando cadastro sem Auth...");
+  print("▶️ Iniciando cadastro...");
 
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    if (_generoSelecionado == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Selecione um gênero.")));
-      return;
-    }
-
-    setState(() => _isLoading = true);
-
-    try {
-      final supabase = Supabase.instance.client;
-
-      // FORMATAR DATA
-      final partes = _nascimentoController.text.split("/");
-      final dataPostgres = "${partes[2]}-${partes[1]}-${partes[0]}";
-
-      // DADOS PARA SALVAR ANTES DO AUTH
-      final dados = {
-        "email": _emailController.text.trim(),
-        "nome": _nomeController.text.trim(),
-        "sobrenome": _sobrenomeController.text.trim(),
-        "cpf_cnpj": _cpfController.text.replaceAll(RegExp(r'\D'), ''),
-        "data_nascimento": dataPostgres,
-        "telefone": _telefoneController.text.replaceAll(RegExp(r'\D'), ''),
-        "genero": _generoSelecionado,
-      };
-
-      print("📦 Inserindo na tabela Usuario_Caminhoneiro...");
-      final insertResponse = await supabase
-          .from("Usuario_Caminhoneiro")
-          .insert(dados)
-          .select()
-          .single();
-
-      print("✔️ Inserido no banco: $insertResponse");
-
-      // AGORA CRIA O AUTH
-      print("📨 Criando usuário no AUTH...");
-      final authResponse = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      if (authResponse.user == null) {
-        throw "Falha ao criar usuário no AUTH";
-      }
-
-      final userId = authResponse.user!.id;
-      print("✔️ Auth criado com ID: $userId");
-
-      // ATUALIZA LINHA COM ID DO AUTH
-      print("📨 Atualizando tabela com ID Auth...");
-      await supabase
-          .from("Usuario_Caminhoneiro")
-          .update({"id": userId})
-          .eq("email", _emailController.text.trim());
-
-      print("✔️ Linha atualizada com ID Auth!");
-
-      // FINALIZA
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cadastro realizado com sucesso!")),
-        );
-        _proximo();
-      }
-    } catch (e, st) {
-      print("❌ ERRO NO CADASTRO:");
-      print(e);
-      print(st);
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Erro ao cadastrar: $e"),
-          backgroundColor: Colors.red,
-        ),
-      );
-    } finally {
-      setState(() => _isLoading = false);
-    }
+  if (_generoSelecionado == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Selecione um gênero.")),
+    );
+    return;
   }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final supabase = Supabase.instance.client;
+
+    // Formatando a data para yyyy-mm-dd
+    final partes = _nascimentoController.text.split("/");
+    final dataFormatada = "${partes[2]}-${partes[1]}-${partes[0]}";
+
+    print("📨 Criando usuário no Supabase Auth...");
+
+    // 1️⃣ Criar usuário no AUTH
+    final signUpResponse = await supabase.auth.signUp(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    final user = signUpResponse.user;
+
+    if (user == null) {
+      throw "Erro ao criar usuário no AUTH.";
+    }
+
+    final userId = user.id;
+    print("✔ Usuário criado com ID: $userId");
+
+    // 2️⃣ Fazer login automático para habilitar policies authenticated
+    print("🔐 Efetuando login automático...");
+
+    await supabase.auth.signInWithPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    print("✔ Login realizado. User atual: ${supabase.auth.currentUser?.id}");
+
+    // 3️⃣ Inserir dados do usuário na tabela Usuario_Caminhoneiro
+    final dados = {
+      "id": userId, // agora o id vem direto do auth
+      "email": _emailController.text.trim(),
+      "nome": _nomeController.text.trim(),
+      "sobrenome": _sobrenomeController.text.trim(),
+      "cpf_cnpj": _cpfController.text.trim(),
+      "data_nascimento": dataFormatada,
+      "telefone": _telefoneController.text.trim(),
+      "genero": _generoSelecionado,
+      "foto_url": null,
+    };
+
+    print("📦 Salvando dados na tabela Usuario_Caminhoneiro:");
+    print(dados);
+
+    await supabase.from("Usuario_Caminhoneiro").insert(dados);
+
+    print("✔ Dados salvos com sucesso!");
+
+    // 4️⃣ Navegar após salvar corretamente
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Cadastro realizado com sucesso!")),
+      );
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
+      );
+    }
+  } catch (e, stack) {
+    print("❌ ERRO NO CADASTRO:");
+    print(e);
+    print(stack);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Erro ao cadastrar: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() => _isLoading = false);
+  }
+}
+
 
   @override
   Widget build(BuildContext context) {
