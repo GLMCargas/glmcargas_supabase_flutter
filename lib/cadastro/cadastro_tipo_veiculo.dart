@@ -22,16 +22,8 @@ class _CadastroTipoVeiculoScreenState extends State<CadastroTipoVeiculoScreen> {
       'Rodotrem',
       'Vanderléia',
     };
-    const medios = {
-      'Bitruck',
-      'Truck',
-    };
-    const leves = {
-      '3/4',
-      'Fiorino',
-      'Toco',
-      'VLC',
-    };
+    const medios = {'Bitruck', 'Truck'};
+    const leves = {'3/4', 'Fiorino', 'Toco', 'VLC'};
 
     if (pesados.contains(tipo)) return 'Pesado';
     if (medios.contains(tipo)) return 'Médio';
@@ -187,22 +179,31 @@ class _CadastroTipoVeiculoScreenState extends State<CadastroTipoVeiculoScreen> {
                       const SizedBox(height: 24),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: _proximo,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              CircleAvatar(
-                                radius: 6,
-                                backgroundColor: Colors.orange,
-                              ),
-                              SizedBox(width: 4),
-                              Icon(Icons.play_arrow,
-                                  size: 40, color: Colors.orange),
-                              SizedBox(width: 4),
-                              Icon(Icons.play_arrow,
-                                  size: 50, color: Color(0xFFFFC89C)),
-                            ],
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: _proximo,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                CircleAvatar(
+                                  radius: 6,
+                                  backgroundColor: Colors.orange,
+                                ),
+                                SizedBox(width: 4),
+                                Icon(
+                                  Icons.play_arrow,
+                                  size: 40,
+                                  color: Colors.orange,
+                                ),
+                                SizedBox(width: 4),
+                                Icon(
+                                  Icons.play_arrow,
+                                  size: 50,
+                                  color: Color(0xFFFFC89C),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

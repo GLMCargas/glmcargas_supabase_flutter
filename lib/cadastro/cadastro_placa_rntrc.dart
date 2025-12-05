@@ -6,10 +6,8 @@ import 'documentos_cnh.dart';
 class CadastroPlacaRntrcScreen extends StatefulWidget {
   final VehicleData vehicleData;
 
-  const CadastroPlacaRntrcScreen({
-    Key? key,
-    required this.vehicleData,
-  }) : super(key: key);
+  const CadastroPlacaRntrcScreen({Key? key, required this.vehicleData})
+    : super(key: key);
 
   @override
   State<CadastroPlacaRntrcScreen> createState() =>
@@ -177,8 +175,9 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                             filled: true,
                             fillColor: Colors.orange.shade100,
                           ),
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? "Campo obrigatório" : null,
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? "Campo obrigatório"
+                              : null,
                         ),
                         const SizedBox(height: 12),
 
@@ -192,8 +191,9 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                             filled: true,
                             fillColor: Colors.orange.shade100,
                           ),
-                          validator: (v) =>
-                              (v == null || v.isEmpty) ? "Campo obrigatório" : null,
+                          validator: (v) => (v == null || v.isEmpty)
+                              ? "Campo obrigatório"
+                              : null,
                         ),
 
                         const SizedBox(height: 24),
@@ -221,25 +221,34 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
 
                         Align(
                           alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTap: _isLoading ? null : _salvarVeiculo,
-                            child: _isLoading
-                                ? const CircularProgressIndicator()
-                                : Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      CircleAvatar(
-                                        radius: 6,
-                                        backgroundColor: Colors.orange,
-                                      ),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.play_arrow,
-                                          size: 40, color: Colors.orange),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.play_arrow,
-                                          size: 50, color: Color(0xFFFFC89C)),
-                                    ],
-                                  ),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: _isLoading ? null : _salvarVeiculo,
+                              child: _isLoading
+                                  ? const CircularProgressIndicator()
+                                  : Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: const [
+                                        CircleAvatar(
+                                          radius: 6,
+                                          backgroundColor: Colors.orange,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Icon(
+                                          Icons.play_arrow,
+                                          size: 40,
+                                          color: Colors.orange,
+                                        ),
+                                        SizedBox(width: 4),
+                                        Icon(
+                                          Icons.play_arrow,
+                                          size: 50,
+                                          color: Color(0xFFFFC89C),
+                                        ),
+                                      ],
+                                    ),
+                            ),
                           ),
                         ),
                       ],

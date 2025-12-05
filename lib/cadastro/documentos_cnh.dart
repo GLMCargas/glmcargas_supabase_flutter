@@ -1,7 +1,10 @@
+import 'dart:typed_data';
 import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'documentos_selfie.dart';
 
 class DocumentosCnhScreen extends StatefulWidget {
@@ -12,93 +15,111 @@ class DocumentosCnhScreen extends StatefulWidget {
 }
 
 class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
-  final ImagePicker _picker = ImagePicker();
-  File? _arquivoSelecionado;
-  bool _isUploading = false;
+  File? _imagemLocal;
+  Uint8List? _imagemBytesWeb;
 
-  Future<void> _selecionarDocumentoEEnviar() async {
-    final picked = await _picker.pickImage(
-      source: ImageSource.gallery, // se quiser depois pode trocar por camera
-      imageQuality: 80,
-    );
+  bool _isUploading = false;
+  final ImagePicker _picker = ImagePicker();
+
+  Future<void> _selecionarDocumento() async {
+    final XFile? picked = await _picker.pickImage(source: ImageSource.gallery);
 
     if (picked == null) return;
 
-    setState(() {
-      _arquivoSelecionado = File(picked.path);
-    });
+    if (kIsWeb) {
+      _imagemBytesWeb = await picked.readAsBytes();
+    } else {
+      _imagemLocal = File(picked.path);
+    }
 
-    await _uploadDocumento();
+    setState(() {});
   }
 
   Future<void> _uploadDocumento() async {
-    final supabase = Supabase.instance.client;
-    final user = supabase.auth.currentUser;
-
-    if (user == null) {
+    if (_imagemLocal == null && _imagemBytesWeb == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro: usuário não autenticado.")),
+        const SnackBar(content: Text("Envie a imagem da CNH antes de continuar.")),
       );
       return;
     }
-
-    if (_arquivoSelecionado == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Selecione um arquivo primeiro.")),
-      );
-      return;
-    }
-
-    setState(() => _isUploading = true);
 
     try {
-      final bytes = await _arquivoSelecionado!.readAsBytes();
-      final filePath = "cnh_motoristas/${user.id}.jpg";
+      setState(() => _isUploading = true);
 
-      await supabase.storage.from("cnh_motoristas").uploadBinary(
-            filePath,
-            bytes,
-            fileOptions: const FileOptions(
-              contentType: "image/jpeg",
-              upsert: true,
-            ),
-          );
+      final supabase = Supabase.instance.client;
+      final user = supabase.auth.currentUser;
 
-      final url = supabase.storage
-          .from("cnh_motoristas")
-          .getPublicUrl(filePath);
+      if (user == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Erro: usuário não autenticado.")),
+        );
+        return;
+      }
 
-      print("📄 CNH enviada. URL pública: $url");
-      // Se tiver coluna no banco para guardar a URL, você pode fazer um update aqui.
+      final path = "documentos_cnh/${user.id}.jpg";
 
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("Documento enviado com sucesso!"),
-        ),
-      );
+      if (kIsWeb) {
+        await supabase.storage.from("cnh_motoristas").uploadBinary(
+          path,
+          _imagemBytesWeb!,
+          fileOptions: const FileOptions(
+            contentType: "image/jpeg",
+            upsert: true,
+          ),
+        );
+      } else {
+        final bytes = await _imagemLocal!.readAsBytes();
+        await supabase.storage.from("cnh_motoristas").uploadBinary(
+          path,
+          bytes,
+          fileOptions: const FileOptions(
+            contentType: "image/jpeg",
+            upsert: true,
+          ),
+        );
+      }
 
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const DocumentosSelfieScreen()),
       );
-    } catch (e, stack) {
-      print("❌ ERRO AO ENVIAR DOCUMENTO DE CNH:");
-      print(e);
-      print(stack);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Erro ao enviar documento: $e"),
-            backgroundColor: Colors.red,
-          ),
-        );
-      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Erro ao enviar documento: $e")),
+      );
     } finally {
-      if (mounted) setState(() => _isUploading = false);
+      setState(() => _isUploading = false);
     }
+  }
+
+  Widget _buildPreview() {
+    if (kIsWeb && _imagemBytesWeb != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.memory(_imagemBytesWeb!, height: 200, fit: BoxFit.cover),
+      );
+    }
+
+    if (!kIsWeb && _imagemLocal != null) {
+      return ClipRRect(
+        borderRadius: BorderRadius.circular(12),
+        child: Image.file(_imagemLocal!, height: 200, fit: BoxFit.cover),
+      );
+    }
+
+    return Container(
+      height: 180,
+      width: double.infinity,
+      alignment: Alignment.center,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.orange, width: 2),
+      ),
+      child: const Text(
+        "Nenhuma imagem selecionada",
+        style: TextStyle(color: Colors.orange),
+      ),
+    );
   }
 
   @override
@@ -121,12 +142,11 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
           ),
           child: Column(
             children: [
-              // TOPO
+              // TOPO FIXO
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
                 decoration: const BoxDecoration(
-                  color: Colors.white,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
                 ),
                 child: Row(
@@ -152,88 +172,85 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
                 ),
               ),
 
+              // ÁREA ROLÁVEL
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      const SizedBox(height: 10),
                       const Center(
                         child: Text(
-                          'Documentos',
+                          "Documentos",
                           style: TextStyle(
                             fontSize: 24,
                             fontWeight: FontWeight.bold,
                           ),
                         ),
                       ),
+
                       const SizedBox(height: 4),
                       const Center(
                         child: Text(
-                          'Envie uma foto da sua CNH atual',
-                          textAlign: TextAlign.center,
+                          "Envie uma foto da sua CNH",
+                          style: TextStyle(fontSize: 16),
                         ),
                       ),
+
                       const SizedBox(height: 24),
 
                       const Text(
-                        'Siga as instruções de envio:',
+                        "Siga as instruções",
                         style: TextStyle(
-                          fontSize: 18,
                           fontWeight: FontWeight.bold,
+                          fontSize: 18,
                         ),
                       ),
-                      const SizedBox(height: 12),
-                      const Text('• Documento fora do plástico e aberto'),
-                      const SizedBox(height: 4),
-                      const Text('• Todos os campos legíveis'),
-                      const SizedBox(height: 4),
-                      const Text('• CNH dentro da validade'),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 10),
+                      const Text("• Documento fora do plástico e aberto"),
+                      const Text("• Todos os campos legíveis"),
 
-                      if (_arquivoSelecionado != null)
-                        Center(
-                          child: Column(
-                            children: [
-                              ClipRRect(
-                                borderRadius: BorderRadius.circular(12),
-                                child: Image.file(
-                                  _arquivoSelecionado!,
-                                  height: 150,
-                                  fit: BoxFit.cover,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              const Text(
-                                "Pré-visualização do documento selecionado",
-                                style: TextStyle(fontSize: 12),
-                              ),
-                            ],
+                      const SizedBox(height: 20),
+
+                      _buildPreview(),
+                      const SizedBox(height: 16),
+
+                      SizedBox(
+                        width: double.infinity,
+                        child: OutlinedButton(
+                          onPressed: _selecionarDocumento,
+                          style: OutlinedButton.styleFrom(
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            side: const BorderSide(color: Colors.orange),
+                          ),
+                          child: const Text(
+                            "Selecionar arquivo",
+                            style: TextStyle(color: Colors.orange, fontSize: 16),
                           ),
                         ),
+                      ),
 
-                      const SizedBox(height: 24),
+                      const SizedBox(height: 40),
 
                       SizedBox(
                         width: double.infinity,
                         child: ElevatedButton(
-                          onPressed:
-                              _isUploading ? null : _selecionarDocumentoEEnviar,
+                          onPressed: _isUploading ? null : _uploadDocumento,
                           style: ElevatedButton.styleFrom(
+                            enabledMouseCursor: SystemMouseCursors.click,
                             backgroundColor: Colors.orange,
                             padding: const EdgeInsets.symmetric(vertical: 16),
                             shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(18),
+                              borderRadius: BorderRadius.circular(12),
                             ),
                           ),
                           child: _isUploading
-                              ? const CircularProgressIndicator(
-                                  color: Colors.white,
-                                )
+                              ? const CircularProgressIndicator(color: Colors.white)
                               : const Text(
-                                  'Enviar documento',
-                                  style: TextStyle(fontSize: 16),
+                                  "Enviar documento",
+                                  style: TextStyle(fontSize: 18),
                                 ),
                         ),
                       ),

@@ -5,10 +5,8 @@ import 'vehicle_data.dart';
 class CadastroTipoCarroceriaScreen extends StatefulWidget {
   final VehicleData vehicleData;
 
-  const CadastroTipoCarroceriaScreen({
-    Key? key,
-    required this.vehicleData,
-  }) : super(key: key);
+  const CadastroTipoCarroceriaScreen({Key? key, required this.vehicleData})
+    : super(key: key);
 
   @override
   State<CadastroTipoCarroceriaScreen> createState() =>
@@ -20,12 +18,7 @@ class _CadastroTipoCarroceriaScreenState
   String? _carroceriaSelecionada;
 
   String _determinarCategoriaBau(String tipoBau) {
-    const fechadas = {
-      'Baú',
-      'Baú Frigorífico',
-      'Baú Refrigerado',
-      'Sider',
-    };
+    const fechadas = {'Baú', 'Baú Frigorífico', 'Baú Refrigerado', 'Sider'};
     const abertas = {
       'Caçamba',
       'Grade Baixa',
@@ -208,22 +201,31 @@ class _CadastroTipoCarroceriaScreenState
                       const SizedBox(height: 24),
                       Align(
                         alignment: Alignment.centerRight,
-                        child: GestureDetector(
-                          onTap: _proximo,
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: const [
-                              CircleAvatar(
-                                radius: 6,
-                                backgroundColor: Colors.orange,
-                              ),
-                              SizedBox(width: 4),
-                              Icon(Icons.play_arrow,
-                                  size: 40, color: Colors.orange),
-                              SizedBox(width: 4),
-                              Icon(Icons.play_arrow,
-                                  size: 50, color: Color(0xFFFFC89C)),
-                            ],
+                        child: MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: GestureDetector(
+                            onTap: _proximo,
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: const [
+                                CircleAvatar(
+                                  radius: 6,
+                                  backgroundColor: Colors.orange,
+                                ),
+                                SizedBox(width: 4),
+                                Icon(
+                                  Icons.play_arrow,
+                                  size: 40,
+                                  color: Colors.orange,
+                                ),
+                                SizedBox(width: 4),
+                                Icon(
+                                  Icons.play_arrow,
+                                  size: 50,
+                                  color: Color(0xFFFFC89C),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       ),

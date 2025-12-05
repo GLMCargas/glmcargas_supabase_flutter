@@ -167,7 +167,9 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
 
                         Row(
                           children: [
-                            Expanded(child: _campo("Cidade", _cidadeController)),
+                            Expanded(
+                              child: _campo("Cidade", _cidadeController),
+                            ),
                             const SizedBox(width: 8),
                             SizedBox(
                               width: 70,
@@ -201,7 +203,7 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
                                 const Text(
                                   "Sem número",
                                   style: TextStyle(fontSize: 12),
-                                )
+                                ),
                               ],
                             ),
                           ],
@@ -217,23 +219,34 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
 
                         Align(
                           alignment: Alignment.centerRight,
-                          child: GestureDetector(
-                            onTap: _salvarEndereco,
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: const [
-                                CircleAvatar(
-                                    radius: 6, backgroundColor: Colors.orange),
-                                SizedBox(width: 4),
-                                Icon(Icons.play_arrow,
-                                    size: 40, color: Colors.orange),
-                                SizedBox(width: 4),
-                                Icon(Icons.play_arrow,
-                                    size: 50, color: Color(0xFFFFC89C)),
-                              ],
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: _salvarEndereco,
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  CircleAvatar(
+                                    radius: 6,
+                                    backgroundColor: Colors.orange,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.play_arrow,
+                                    size: 40,
+                                    color: Colors.orange,
+                                  ),
+                                  SizedBox(width: 4),
+                                  Icon(
+                                    Icons.play_arrow,
+                                    size: 50,
+                                    color: Color(0xFFFFC89C),
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
-                        )
+                        ),
                       ],
                     ),
                   ),
@@ -255,20 +268,12 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
       padding: const EdgeInsets.only(bottom: 14),
       child: TextFormField(
         controller: controller,
-        validator: validatorOverride ??
+        validator:
+            validatorOverride ??
             (v) => (v == null || v.isEmpty) ? "Campo obrigatório" : null,
         decoration: InputDecoration(
           labelText: "$label *",
-          filled: true,
-          fillColor: Colors.orange.shade100, // IGUAL À TELA DE CADASTRO
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Colors.black12),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(16),
-            borderSide: const BorderSide(color: Colors.black12),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
         ),
       ),
     );
