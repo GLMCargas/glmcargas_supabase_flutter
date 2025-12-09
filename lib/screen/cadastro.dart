@@ -93,7 +93,7 @@ class _SignupPageState extends State<SignupPage> {
     final supabase = Supabase.instance.client;
     final fileBytes = await _fotoSelecionada!.readAsBytes();
 
-    final filePath = "motoristas/$userId.jpg";
+    final filePath = "fotos_motoristas/$userId.jpg";
 
     await supabase.storage
         .from("fotos_motoristas")
@@ -147,6 +147,7 @@ class _SignupPageState extends State<SignupPage> {
       final userId = user.id;
       print("✔ Usuário criado com ID: $userId");
 
+
       // 2️⃣ Fazer login automático para habilitar policies authenticated
       print("🔐 Efetuando login automático...");
 
@@ -157,6 +158,7 @@ class _SignupPageState extends State<SignupPage> {
 
       print("✔ Login realizado. User atual: ${supabase.auth.currentUser?.id}");
 
+      final filePath = "fotos_motoristas/$userId.jpg";
       // 3️⃣ Inserir dados do usuário na tabela Usuario_Caminhoneiro
       final dados = {
         "id": userId, // agora o id vem direto do auth
@@ -167,7 +169,7 @@ class _SignupPageState extends State<SignupPage> {
         "data_nascimento": dataFormatada,
         "telefone": _telefoneController.text.trim(),
         "genero": _generoSelecionado,
-        "foto_url": null,
+        "foto_url": filePath,
       };
 
       print("📦 Salvando dados na tabela Usuario_Caminhoneiro:");
