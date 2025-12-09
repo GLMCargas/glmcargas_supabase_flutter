@@ -38,7 +38,9 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
   Future<void> _uploadDocumento() async {
     if (_imagemLocal == null && _imagemBytesWeb == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Envie a imagem da CNH antes de continuar.")),
+        const SnackBar(
+          content: Text("Envie a imagem da CNH antes de continuar."),
+        ),
       );
       return;
     }
@@ -56,37 +58,48 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
         return;
       }
 
-      final path = "documentos_cnh/${user.id}.jpg";
+      final path = "cnh_motoristas/${user.id}.jpg";
 
       if (kIsWeb) {
-        await supabase.storage.from("cnh_motoristas").uploadBinary(
-          path,
-          _imagemBytesWeb!,
-          fileOptions: const FileOptions(
-            contentType: "image/jpeg",
-            upsert: true,
-          ),
-        );
+        await supabase.storage
+            .from("cnh_motoristas")
+            .uploadBinary(
+              path,
+              _imagemBytesWeb!,
+              fileOptions: const FileOptions(
+                contentType: "image/jpeg",
+                upsert: true,
+              ),
+            );
       } else {
         final bytes = await _imagemLocal!.readAsBytes();
-        await supabase.storage.from("cnh_motoristas").uploadBinary(
-          path,
-          bytes,
-          fileOptions: const FileOptions(
-            contentType: "image/jpeg",
-            upsert: true,
-          ),
-        );
+        await supabase.storage
+            .from("cnh_motoristas")
+            .uploadBinary(
+              path,
+              bytes,
+              fileOptions: const FileOptions(
+                contentType: "image/jpeg",
+                upsert: true,
+              ),
+            );
       }
+
+      // 1️⃣ Criar registro no DocumentosMotorista
+      await supabase.from("Documentos_Motorista").insert({
+        "motorista_id": user.id,
+        "tipo": "CNH",
+        "url": path,
+      });
 
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const DocumentosSelfieScreen()),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Erro ao enviar documento: $e")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Erro ao enviar documento: $e")));
     } finally {
       setState(() => _isUploading = false);
     }
@@ -227,7 +240,10 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
                           ),
                           child: const Text(
                             "Selecionar arquivo",
-                            style: TextStyle(color: Colors.orange, fontSize: 16),
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontSize: 16,
+                            ),
                           ),
                         ),
                       ),
@@ -247,7 +263,9 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
                             ),
                           ),
                           child: _isUploading
-                              ? const CircularProgressIndicator(color: Colors.white)
+                              ? const CircularProgressIndicator(
+                                  color: Colors.white,
+                                )
                               : const Text(
                                   "Enviar documento",
                                   style: TextStyle(fontSize: 18),
