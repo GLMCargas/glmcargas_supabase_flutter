@@ -1,5 +1,6 @@
 import 'dart:io';
 import 'package:app/cadastro/cadastro_endereco.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:image_picker/image_picker.dart';
@@ -48,6 +49,7 @@ class _SignupPageState extends State<SignupPage> {
   bool _obscurePassword = true;
 
   File? _fotoSelecionada;
+  Uint8List? _fotoSelecionadaWeb;
   String? _generoSelecionado;
 
   final ImagePicker _picker = ImagePicker();
@@ -67,9 +69,20 @@ class _SignupPageState extends State<SignupPage> {
       imageQuality: 70,
     );
 
-    if (pickedFile != null) {
+    if (pickedFile == null) return;
+
+    if (kIsWeb) {
+      // WEB → salva bytes
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _fotoSelecionadaWeb = bytes;
+        _fotoSelecionada = null; // limpa o File
+      });
+    } else {
+      // MOBILE → usa File
       setState(() {
         _fotoSelecionada = File(pickedFile.path);
+        _fotoSelecionadaWeb = null; // limpa bytes
       });
     }
   }
@@ -97,99 +110,98 @@ class _SignupPageState extends State<SignupPage> {
   }
 
   Future<void> _signUp() async {
-  print("▶️ Iniciando cadastro...");
+    print("▶️ Iniciando cadastro...");
 
-  if (!_formKey.currentState!.validate()) return;
+    if (!_formKey.currentState!.validate()) return;
 
-  if (_generoSelecionado == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Selecione um gênero.")),
-    );
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    final supabase = Supabase.instance.client;
-
-    // Formatando a data para yyyy-mm-dd
-    final partes = _nascimentoController.text.split("/");
-    final dataFormatada = "${partes[2]}-${partes[1]}-${partes[0]}";
-
-    print("📨 Criando usuário no Supabase Auth...");
-
-    // 1️⃣ Criar usuário no AUTH
-    final signUpResponse = await supabase.auth.signUp(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-
-    final user = signUpResponse.user;
-
-    if (user == null) {
-      throw "Erro ao criar usuário no AUTH.";
-    }
-
-    final userId = user.id;
-    print("✔ Usuário criado com ID: $userId");
-
-    // 2️⃣ Fazer login automático para habilitar policies authenticated
-    print("🔐 Efetuando login automático...");
-
-    await supabase.auth.signInWithPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-
-    print("✔ Login realizado. User atual: ${supabase.auth.currentUser?.id}");
-
-    // 3️⃣ Inserir dados do usuário na tabela Usuario_Caminhoneiro
-    final dados = {
-      "id": userId, // agora o id vem direto do auth
-      "email": _emailController.text.trim(),
-      "nome": _nomeController.text.trim(),
-      "sobrenome": _sobrenomeController.text.trim(),
-      "cpf_cnpj": _cpfController.text.trim(),
-      "data_nascimento": dataFormatada,
-      "telefone": _telefoneController.text.trim(),
-      "genero": _generoSelecionado,
-      "foto_url": null,
-    };
-
-    print("📦 Salvando dados na tabela Usuario_Caminhoneiro:");
-    print(dados);
-
-    await supabase.from("Usuario_Caminhoneiro").insert(dados);
-
-    print("✔ Dados salvos com sucesso!");
-
-    // 4️⃣ Navegar após salvar corretamente
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Cadastro realizado com sucesso!")),
-      );
-      Navigator.push(
+    if (_generoSelecionado == null) {
+      ScaffoldMessenger.of(
         context,
-        MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
-      );
+      ).showSnackBar(const SnackBar(content: Text("Selecione um gênero.")));
+      return;
     }
-  } catch (e, stack) {
-    print("❌ ERRO NO CADASTRO:");
-    print(e);
-    print(stack);
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Erro ao cadastrar: $e"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    setState(() => _isLoading = false);
+    setState(() => _isLoading = true);
+
+    try {
+      final supabase = Supabase.instance.client;
+
+      // Formatando a data para yyyy-mm-dd
+      final partes = _nascimentoController.text.split("/");
+      final dataFormatada = "${partes[2]}-${partes[1]}-${partes[0]}";
+
+      print("📨 Criando usuário no Supabase Auth...");
+
+      // 1️⃣ Criar usuário no AUTH
+      final signUpResponse = await supabase.auth.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      final user = signUpResponse.user;
+
+      if (user == null) {
+        throw "Erro ao criar usuário no AUTH.";
+      }
+
+      final userId = user.id;
+      print("✔ Usuário criado com ID: $userId");
+
+      // 2️⃣ Fazer login automático para habilitar policies authenticated
+      print("🔐 Efetuando login automático...");
+
+      await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      print("✔ Login realizado. User atual: ${supabase.auth.currentUser?.id}");
+
+      // 3️⃣ Inserir dados do usuário na tabela Usuario_Caminhoneiro
+      final dados = {
+        "id": userId, // agora o id vem direto do auth
+        "email": _emailController.text.trim(),
+        "nome": _nomeController.text.trim(),
+        "sobrenome": _sobrenomeController.text.trim(),
+        "cpf_cnpj": _cpfController.text.trim(),
+        "data_nascimento": dataFormatada,
+        "telefone": _telefoneController.text.trim(),
+        "genero": _generoSelecionado,
+        "foto_url": null,
+      };
+
+      print("📦 Salvando dados na tabela Usuario_Caminhoneiro:");
+      print(dados);
+
+      await supabase.from("Usuario_Caminhoneiro").insert(dados);
+
+      print("✔ Dados salvos com sucesso!");
+
+      // 4️⃣ Navegar após salvar corretamente
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Cadastro realizado com sucesso!")),
+        );
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
+        );
+      }
+    } catch (e, stack) {
+      print("❌ ERRO NO CADASTRO:");
+      print(e);
+      print(stack);
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Erro ao cadastrar: $e"),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      setState(() => _isLoading = false);
+    }
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -293,24 +305,44 @@ class _SignupPageState extends State<SignupPage> {
                         Center(
                           child: Column(
                             children: [
-                              GestureDetector(
-                                onTap: _selecionarFoto,
-                                child: CircleAvatar(
-                                  radius: 55,
-                                  backgroundImage: _fotoSelecionada != null
-                                      ? FileImage(_fotoSelecionada!)
-                                      : null,
-                                  child: _fotoSelecionada == null
-                                      ? const Icon(Icons.add_a_photo, size: 30)
-                                      : null,
+                              MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: _selecionarFoto,
+                                  child: CircleAvatar(
+                                    radius: 55,
+                                    backgroundImage: kIsWeb
+                                        ? (_fotoSelecionadaWeb != null
+                                              ? MemoryImage(
+                                                  _fotoSelecionadaWeb!,
+                                                )
+                                              : null)
+                                        : (_fotoSelecionada != null
+                                              ? FileImage(_fotoSelecionada!)
+                                              : null),
+                                    child:
+                                        (_fotoSelecionada == null &&
+                                            _fotoSelecionadaWeb == null)
+                                        ? const Icon(
+                                            Icons.add_a_photo,
+                                            size: 30,
+                                          )
+                                        : null,
+                                  ),
                                 ),
                               ),
                               const SizedBox(height: 10),
-                              const Text(
-                                "Adicionar foto",
-                                style: TextStyle(
-                                  color: Colors.orange,
-                                  fontWeight: FontWeight.bold,
+                              MouseRegion(
+                                cursor: SystemMouseCursors.click,
+                                child: GestureDetector(
+                                  onTap: _selecionarFoto,
+                                  child: Text(
+                                    "Adicionar foto",
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],

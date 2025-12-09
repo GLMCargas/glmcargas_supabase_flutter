@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 import 'vehicle_data.dart';
 import 'documentos_cnh.dart';
 
@@ -173,7 +174,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             filled: true,
-                            fillColor: Colors.orange.shade100,
+                            fillColor: Colors.white,
                           ),
                           validator: (v) => (v == null || v.isEmpty)
                               ? "Campo obrigatório"
@@ -189,7 +190,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             filled: true,
-                            fillColor: Colors.orange.shade100,
+                            fillColor: Colors.white,
                           ),
                           validator: (v) => (v == null || v.isEmpty)
                               ? "Campo obrigatório"
@@ -204,16 +205,39 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                             color: Colors.grey.shade200,
                             borderRadius: BorderRadius.circular(16),
                           ),
-                          child: Row(
-                            children: const [
-                              Icon(Icons.info_outline, size: 18),
-                              SizedBox(width: 8),
-                              Expanded(
-                                child: Text(
-                                  'Veja no documento do veículo onde encontrar o número do RNTRC (ANTT).',
-                                ),
+                          child: MouseRegion(
+                            cursor: SystemMouseCursors.click, 
+                            child: GestureDetector(
+                              onTap: () async {
+                                const url =
+                                    "https://consultapublica.antt.gov.br/Site/ConsultaRNTRC.aspx"; 
+
+                                if (await canLaunchUrl(Uri.parse(url))) {
+                                  await launchUrl(
+                                    Uri.parse(url),
+                                    mode: LaunchMode
+                                        .externalApplication, 
+                                  );
+                                } else {
+                                  print("Não foi possível abrir o link");
+                                }
+                              },
+                              child: Row(
+                                children: const [
+                                  Icon(Icons.info_outline, size: 18),
+                                  SizedBox(width: 8),
+                                  Expanded(
+                                    child: Text(
+                                      'Veja como encontrar o seu número do RNTRC (ANTT).',
+                                      style: TextStyle(
+                                        color: Colors.blueGrey,
+                                        decoration: TextDecoration.underline,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
+                            ),
                           ),
                         ),
 
