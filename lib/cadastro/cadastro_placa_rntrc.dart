@@ -42,7 +42,6 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
       return;
     }
 
-    // Garantir que os campos essenciais não são nulos
     final v = widget.vehicleData;
     if (v.tipoVeiculo == null ||
         v.tamanhoVeiculo == null ||
@@ -113,7 +112,6 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
           ),
           child: Column(
             children: [
-              // TOPO
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),

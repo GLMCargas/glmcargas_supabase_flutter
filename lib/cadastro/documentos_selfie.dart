@@ -92,7 +92,6 @@ class _DocumentosSelfieScreenState extends State<DocumentosSelfieScreen> {
             );
       }
 
-      // 1️⃣ Criar registro na tabela DocumentosMotorista
       await supabase.from("Documentos_Motorista").insert({
         "motorista_id": user.id,
         "tipo": "Selfie",
@@ -159,7 +158,6 @@ class _DocumentosSelfieScreenState extends State<DocumentosSelfieScreen> {
           ),
           child: Column(
             children: [
-              // TOPO
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),

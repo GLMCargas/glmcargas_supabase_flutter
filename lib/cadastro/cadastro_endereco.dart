@@ -86,16 +86,16 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Colors.orange.shade100, // IGUAL À PÁGINA DE CADASTRO
+      backgroundColor: Colors.orange.shade100, 
       body: Center(
         child: Container(
           constraints: const BoxConstraints(maxWidth: 430),
           decoration: BoxDecoration(
-            color: Colors.white, // IGUAL À OUTRA TELA
+            color: Colors.white, 
             borderRadius: BorderRadius.circular(20),
             boxShadow: [
               BoxShadow(
-                color: Colors.orange.withOpacity(0.4), // IGUAL
+                color: Colors.orange.withOpacity(0.4), 
                 blurRadius: 12,
                 offset: const Offset(0, 4),
               ),
@@ -104,7 +104,6 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
 
           child: Column(
             children: [
-              // 🔶 TOPO IGUAL
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),

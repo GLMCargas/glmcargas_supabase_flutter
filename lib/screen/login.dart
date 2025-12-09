@@ -26,7 +26,15 @@ class _LoginPageState extends State<LoginPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Login realizado com sucesso!')),
         );
-        Navigator.pushReplacementNamed(context, '/home');
+        await Future.delayed(const Duration(milliseconds: 300));
+
+        final currentUser = _supabase.auth.currentUser;
+
+        if (currentUser == null) {
+          await _supabase.auth.refreshSession();
+        }
+
+        Navigator.pushReplacementNamed(context, '/perfilMotorista');
       }
     } on AuthException catch (e) {
       ScaffoldMessenger.of(
@@ -47,12 +55,9 @@ class _LoginPageState extends State<LoginPage> {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Imagem de fundo
           Image.asset('assets/images/fundocaminhao.jpg', fit: BoxFit.cover),
-          // Camada de cor levemente escura
           Container(color: Colors.black.withOpacity(0.3)),
 
-          // Conteúdo central
           Center(
             child: SingleChildScrollView(
               padding: const EdgeInsets.all(20),
@@ -73,7 +78,6 @@ class _LoginPageState extends State<LoginPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    // Logo
                     Row(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
@@ -107,7 +111,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 30),
 
-                    // Campo de Email
                     TextField(
                       controller: _emailController,
                       decoration: InputDecoration(
@@ -134,7 +137,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 16),
 
-                    // Campo de Senha
                     TextField(
                       controller: _passwordController,
                       obscureText: true,
@@ -162,7 +164,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 24),
 
-                    // Botão de Login
                     SizedBox(
                       width: double.infinity,
                       child: ElevatedButton.icon(
@@ -191,7 +192,6 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                     const SizedBox(height: 20),
 
-                    // Link de cadastro
                     TextButton(
                       onPressed: () {
                         Navigator.pushNamed(context, '/cadastroMotorista');

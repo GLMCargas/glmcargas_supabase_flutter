@@ -17,7 +17,6 @@ class SignupPage extends StatefulWidget {
 class _SignupPageState extends State<SignupPage> {
   final _formKey = GlobalKey<FormState>();
 
-  // Controllers
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _nomeController = TextEditingController();
@@ -26,7 +25,6 @@ class _SignupPageState extends State<SignupPage> {
   final _nascimentoController = TextEditingController();
   final _telefoneController = TextEditingController();
 
-  // Máscaras
   final cpfMask = MaskTextInputFormatter(
     mask: "###.###.###-##",
     filter: {"#": RegExp(r'[0-9]')},
@@ -72,17 +70,15 @@ class _SignupPageState extends State<SignupPage> {
     if (pickedFile == null) return;
 
     if (kIsWeb) {
-      // WEB → salva bytes
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _fotoSelecionadaWeb = bytes;
-        _fotoSelecionada = null; // limpa o File
+        _fotoSelecionada = null; 
       });
     } else {
-      // MOBILE → usa File
       setState(() {
         _fotoSelecionada = File(pickedFile.path);
-        _fotoSelecionadaWeb = null; // limpa bytes
+        _fotoSelecionadaWeb = null; 
       });
     }
   }
@@ -126,13 +122,9 @@ class _SignupPageState extends State<SignupPage> {
     try {
       final supabase = Supabase.instance.client;
 
-      // Formatando a data para yyyy-mm-dd
       final partes = _nascimentoController.text.split("/");
       final dataFormatada = "${partes[2]}-${partes[1]}-${partes[0]}";
 
-      print("📨 Criando usuário no Supabase Auth...");
-
-      // 1️⃣ Criar usuário no AUTH
       final signUpResponse = await supabase.auth.signUp(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
@@ -145,23 +137,15 @@ class _SignupPageState extends State<SignupPage> {
       }
 
       final userId = user.id;
-      print("✔ Usuário criado com ID: $userId");
-
-
-      // 2️⃣ Fazer login automático para habilitar policies authenticated
-      print("🔐 Efetuando login automático...");
 
       await supabase.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
 
-      print("✔ Login realizado. User atual: ${supabase.auth.currentUser?.id}");
-
       final filePath = "fotos_motoristas/$userId.jpg";
-      // 3️⃣ Inserir dados do usuário na tabela Usuario_Caminhoneiro
       final dados = {
-        "id": userId, // agora o id vem direto do auth
+        "id": userId, 
         "email": _emailController.text.trim(),
         "nome": _nomeController.text.trim(),
         "sobrenome": _sobrenomeController.text.trim(),
@@ -172,14 +156,8 @@ class _SignupPageState extends State<SignupPage> {
         "foto_url": filePath,
       };
 
-      print("📦 Salvando dados na tabela Usuario_Caminhoneiro:");
-      print(dados);
-
       await supabase.from("Usuario_Caminhoneiro").insert(dados);
 
-      print("✔ Dados salvos com sucesso!");
-
-      // 4️⃣ Navegar após salvar corretamente
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text("Cadastro realizado com sucesso!")),
@@ -190,7 +168,7 @@ class _SignupPageState extends State<SignupPage> {
         );
       }
     } catch (e, stack) {
-      print("❌ ERRO NO CADASTRO:");
+      print("ERRO NO CADASTRO:");
       print(e);
       print(stack);
 
@@ -225,7 +203,6 @@ class _SignupPageState extends State<SignupPage> {
           ),
           child: Column(
             children: [
-              // 🔶🔶🔶 TOPO FIXO DENTRO DA ÁREA BRANCA 🔶🔶🔶
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -256,7 +233,6 @@ class _SignupPageState extends State<SignupPage> {
                 ),
               ),
 
-              // 🔶🔶🔶 ÁREA ROLÁVEL 🔶🔶🔶
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),
@@ -267,7 +243,6 @@ class _SignupPageState extends State<SignupPage> {
                       children: [
                         const SizedBox(height: 10),
 
-                        /// TÍTULOS
                         const Center(
                           child: Text(
                             "Olá, Motorista!",
@@ -303,7 +278,6 @@ class _SignupPageState extends State<SignupPage> {
 
                         const SizedBox(height: 20),
 
-                        /// FOTO DO MOTORISTA
                         Center(
                           child: Column(
                             children: [
@@ -353,7 +327,6 @@ class _SignupPageState extends State<SignupPage> {
 
                         const SizedBox(height: 24),
 
-                        /// CAMPOS DO FORMULÁRIO
                         _buildCampo(
                           "Email",
                           _emailController,
@@ -436,7 +409,6 @@ class _SignupPageState extends State<SignupPage> {
 
                         const SizedBox(height: 24),
 
-                        /// GÊNERO
                         const Text(
                           "Com qual gênero você se identifica?",
                           style: TextStyle(
@@ -471,7 +443,6 @@ class _SignupPageState extends State<SignupPage> {
 
                         const SizedBox(height: 30),
 
-                        /// BOTÃO DE CADASTRO
                         SizedBox(
                           width: double.infinity,
                           height: 50,
@@ -505,7 +476,6 @@ class _SignupPageState extends State<SignupPage> {
     );
   }
 
-  /// Campo padrão
   Widget _buildCampo(
     String label,
     TextEditingController controller, {

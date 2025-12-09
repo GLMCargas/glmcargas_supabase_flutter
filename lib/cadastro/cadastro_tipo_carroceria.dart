@@ -97,7 +97,6 @@ class _CadastroTipoCarroceriaScreenState
           ),
           child: Column(
             children: [
-              // TOPO
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),

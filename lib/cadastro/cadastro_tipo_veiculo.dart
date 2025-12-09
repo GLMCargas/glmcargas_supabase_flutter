@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart'; // se for usar algo de auth aqui depois
+import 'package:supabase_flutter/supabase_flutter.dart';
 import 'cadastro_tipo_carroceria.dart';
 import 'vehicle_data.dart';
 
@@ -82,7 +82,6 @@ class _CadastroTipoVeiculoScreenState extends State<CadastroTipoVeiculoScreen> {
           ),
           child: Column(
             children: [
-              // TOPO IGUAL AO CADASTRO
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),

@@ -85,7 +85,6 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
             );
       }
 
-      // 1️⃣ Criar registro no DocumentosMotorista
       await supabase.from("Documentos_Motorista").insert({
         "motorista_id": user.id,
         "tipo": "CNH",
@@ -155,7 +154,6 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
           ),
           child: Column(
             children: [
-              // TOPO FIXO
               Container(
                 height: 64,
                 padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -185,7 +183,6 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
                 ),
               ),
 
-              // ÁREA ROLÁVEL
               Expanded(
                 child: SingleChildScrollView(
                   padding: const EdgeInsets.all(24),

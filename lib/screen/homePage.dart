@@ -17,18 +17,15 @@ class HomePage extends StatelessWidget {
       body: Stack(
         fit: StackFit.expand,
         children: [
-          // Fundo com imagem (igual ao login)
           Image.asset(
-            'assets/images/fundocaminhao.jpg', // mesmo caminho usado no login
+            'assets/images/fundocaminhao.jpg', 
             fit: BoxFit.cover,
           ),
 
-          // Camada de cor escura por cima da imagem
           Container(
             color: Colors.black.withOpacity(0.6),
           ),
 
-          // Conteúdo principal
           Center(
             child: Container(
               padding: const EdgeInsets.all(32),
@@ -62,7 +59,6 @@ class HomePage extends StatelessWidget {
                   ),
                   const SizedBox(height: 30),
 
-                  // Botão de logout
                   SizedBox(
                     width: 180,
                     height: 48,
