@@ -15,7 +15,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   List<Map<String, dynamic>> viagens = [];
   Set<int> cardsAbertos = {};
 
-  bool _menuAberto = false; // MENU LATERAL
+  bool _menuAberto = false; 
 
   @override
   void initState() {
@@ -44,7 +44,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
 
   String formatarData(String iso) {
   try {
-    final data = DateTime.parse(iso); // converte para horário local
+    final data = DateTime.parse(iso); 
     final dia = data.day.toString().padLeft(2, '0');
     final mes = data.month.toString().padLeft(2, '0');
     final ano = data.year;
