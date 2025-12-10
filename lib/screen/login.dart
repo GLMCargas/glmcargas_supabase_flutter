@@ -34,7 +34,7 @@ class _LoginPageState extends State<LoginPage> {
           await _supabase.auth.refreshSession();
         }
 
-        Navigator.pushReplacementNamed(context, '/perfilMotorista');
+        Navigator.pushReplacementNamed(context, '/home');
       }
     } on AuthException catch (e) {
       ScaffoldMessenger.of(
