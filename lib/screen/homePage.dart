@@ -13,7 +13,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   final supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> viagens = [];
-  Set<String> cardsAbertos = {};
+  Set<int> cardsAbertos = {};
 
   bool _menuAberto = false; // MENU LATERAL
 
@@ -34,13 +34,29 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     }
   }
 
-  void _toggleCard(String id) {
+  void _toggleCard(int id) {
     setState(() {
       cardsAbertos.contains(id)
           ? cardsAbertos.remove(id)
           : cardsAbertos.add(id);
     });
   }
+
+  String formatarData(String iso) {
+  try {
+    final data = DateTime.parse(iso); // converte para horário local
+    final dia = data.day.toString().padLeft(2, '0');
+    final mes = data.month.toString().padLeft(2, '0');
+    final ano = data.year;
+    final hora = data.hour.toString().padLeft(2, '0');
+    final minuto = data.minute.toString().padLeft(2, '0');
+
+    return "$dia/$mes/$ano $hora:$minuto";
+  } catch (e) {
+    print("Erro ao formatar data: $e");
+    return iso;
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -49,9 +65,6 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
       body: Center(
         child: Stack(
           children: [
-            // ===============================
-            // 📱 CONTEÚDO PRINCIPAL
-            // ===============================
             Container(
               width: 430,
               decoration: BoxDecoration(
@@ -67,21 +80,20 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
               ),
               child: Column(
                 children: [
-                  // 🔶 CABEÇALHO
                   Container(
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     height: 64,
                     child: Row(
                       children: [
-                        // BOTÃO VOLTAR
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios,
-                              color: Colors.orange),
+                          icon: const Icon(
+                            Icons.arrow_back_ios,
+                            color: Colors.orange,
+                          ),
                           onPressed: () => Navigator.pop(context),
                         ),
 
-                        const Icon(Icons.local_shipping,
-                            color: Colors.orange),
+                        const Icon(Icons.local_shipping, color: Colors.orange),
                         const SizedBox(width: 6),
                         const Text(
                           "GLM",
@@ -94,17 +106,16 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                         const SizedBox(width: 4),
                         const Text(
                           "CARGAS",
-                          style:
-                              TextStyle(fontSize: 18, color: Colors.orange),
+                          style: TextStyle(fontSize: 18, color: Colors.orange),
                         ),
                         const Spacer(),
-
-                        // BOTÃO MENU PERSONALIZADO
                         IconButton(
-                          icon: const Icon(Icons.menu,
-                              size: 28, color: Colors.orange),
-                          onPressed: () =>
-                              setState(() => _menuAberto = true),
+                          icon: const Icon(
+                            Icons.menu,
+                            size: 28,
+                            color: Colors.orange,
+                          ),
+                          onPressed: () => setState(() => _menuAberto = true),
                         ),
                       ],
                     ),
@@ -113,45 +124,36 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                   const SizedBox(height: 10),
                   const Text(
                     "Cargas disponíveis na sua região",
-                    style:
-                        TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
                   const SizedBox(height: 10),
 
-                  // 🔶 LISTA DE VIAGENS
                   Expanded(
                     child: viagens.isEmpty
-                        ? const Center(
-                            child: Text("Nenhuma carga disponível"),
-                          )
+                        ? const Center(child: Text("Nenhuma carga disponível"))
                         : ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: viagens.length,
                             itemBuilder: (context, index) {
                               final v = viagens[index];
-                              final aberta =
-                                  cardsAbertos.contains(v["id"]);
+                              final aberta = cardsAbertos.contains(v["id"]);
 
                               return GestureDetector(
                                 onTap: () => _toggleCard(v["id"]),
                                 child: AnimatedContainer(
-                                  duration:
-                                      const Duration(milliseconds: 250),
-                                  margin:
-                                      const EdgeInsets.only(bottom: 16),
+                                  duration: const Duration(milliseconds: 250),
+                                  margin: const EdgeInsets.only(bottom: 16),
                                   padding: const EdgeInsets.all(12),
                                   decoration: BoxDecoration(
                                     color: aberta
                                         ? Colors.orange.shade300
                                         : Colors.orange.shade200,
-                                    borderRadius:
-                                        BorderRadius.circular(16),
+                                    borderRadius: BorderRadius.circular(16),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
                                         CrossAxisAlignment.start,
                                     children: [
-                                      /// CABEÇALHO DO CARD
                                       Row(
                                         children: [
                                           CircleAvatar(
@@ -159,7 +161,8 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                             child: Text(
                                               v["empresa"][0],
                                               style: const TextStyle(
-                                                  color: Colors.white),
+                                                color: Colors.white,
+                                              ),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
@@ -170,14 +173,14 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                               Text(
                                                 v["empresa"],
                                                 style: const TextStyle(
-                                                  fontWeight:
-                                                      FontWeight.bold,
+                                                  fontWeight: FontWeight.bold,
                                                 ),
                                               ),
                                               Text(
                                                 v["produto"],
                                                 style: const TextStyle(
-                                                    fontSize: 12),
+                                                  fontSize: 12,
+                                                ),
                                               ),
                                             ],
                                           ),
@@ -193,25 +196,24 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                         Text(
                                           "Dimensões: ${v["dimensoes"]}",
                                           style: const TextStyle(
-                                              fontWeight:
-                                                  FontWeight.bold),
+                                            fontWeight: FontWeight.bold,
+                                          ),
                                         ),
                                         Text("Peso: ${v["peso"]} kg"),
                                         Text("Valor: R\$ ${v["valor"]}"),
                                         Text(
-                                          "Limite de entrega: ${v["limite_entrega"]}",
+                                          "Limite de entrega: ${formatarData(v["data_limite_entrega"])}",
                                         ),
                                         const SizedBox(height: 10),
                                         Center(
                                           child: ElevatedButton(
                                             onPressed: () {},
-                                            style: ElevatedButton
-                                                .styleFrom(
-                                              backgroundColor:
-                                                  Colors.green,
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.green,
                                             ),
                                             child: const Text(
-                                                "Bate-papo com a empresa"),
+                                              "Bate-papo com a empresa",
+                                            ),
                                           ),
                                         ),
                                       ],
@@ -223,7 +225,6 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                           ),
                   ),
 
-                  // 🔶 RODAPÉ REDONDO
                   ClipRRect(
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(20),
@@ -233,19 +234,23 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                       color: Colors.orange.shade300,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       child: Row(
-                        mainAxisAlignment:
-                            MainAxisAlignment.spaceEvenly,
+                        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
                           GestureDetector(
                             onTap: () {
-                              Navigator.pushNamed(
-                                  context, "/perfilMotorista");
+                              Navigator.pushNamed(context, "/perfilMotorista");
                             },
-                            child: const Icon(Icons.person,
-                                size: 32, color: Colors.black87),
+                            child: const Icon(
+                              Icons.person,
+                              size: 32,
+                              color: Colors.black87,
+                            ),
                           ),
-                          const Icon(Icons.chat_bubble_outline,
-                              size: 32, color: Colors.black87),
+                          const Icon(
+                            Icons.chat_bubble_outline,
+                            size: 32,
+                            color: Colors.black87,
+                          ),
                         ],
                       ),
                     ),
@@ -254,9 +259,6 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
               ),
             ),
 
-            // ===============================
-            // 🍔 MENU LATERAL INTERNO
-            // ===============================
             AnimatedPositioned(
               duration: const Duration(milliseconds: 250),
               left: _menuAberto ? 0 : -260,
