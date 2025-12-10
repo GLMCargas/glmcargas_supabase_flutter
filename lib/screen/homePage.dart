@@ -1,86 +1,275 @@
+import 'package:app/widgets/menu_lateral.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-class HomePage extends StatelessWidget {
-  const HomePage({super.key});
+class HomeMotoristaScreen extends StatefulWidget {
+  const HomeMotoristaScreen({Key? key}) : super(key: key);
 
-  Future<void> _logout(BuildContext context) async {
-    await Supabase.instance.client.auth.signOut();
-    if (context.mounted) {
-      Navigator.pushReplacementNamed(context, '/login');
+  @override
+  State<HomeMotoristaScreen> createState() => _HomeMotoristaScreenState();
+}
+
+class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
+  final supabase = Supabase.instance.client;
+
+  List<Map<String, dynamic>> viagens = [];
+  Set<String> cardsAbertos = {};
+
+  bool _menuAberto = false; // MENU LATERAL
+
+  @override
+  void initState() {
+    super.initState();
+    _carregarViagens();
+  }
+
+  Future<void> _carregarViagens() async {
+    try {
+      final response = await supabase.from("Viagens").select();
+      setState(() {
+        viagens = List<Map<String, dynamic>>.from(response);
+      });
+    } catch (e) {
+      print("❌ Erro ao carregar viagens: $e");
     }
+  }
+
+  void _toggleCard(String id) {
+    setState(() {
+      cardsAbertos.contains(id)
+          ? cardsAbertos.remove(id)
+          : cardsAbertos.add(id);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset(
-            'assets/images/fundocaminhao.jpg', 
-            fit: BoxFit.cover,
-          ),
-
-          Container(
-            color: Colors.black.withOpacity(0.6),
-          ),
-
-          Center(
-            child: Container(
-              padding: const EdgeInsets.all(32),
+      backgroundColor: Colors.orange.shade100,
+      body: Center(
+        child: Stack(
+          children: [
+            // ===============================
+            // 📱 CONTEÚDO PRINCIPAL
+            // ===============================
+            Container(
+              width: 430,
               decoration: BoxDecoration(
-                color: Colors.white.withOpacity(0.15),
+                color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                border: Border.all(color: Colors.orange.shade700, width: 1.5),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black12,
+                    blurRadius: 12,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
               ),
               child: Column(
-                mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(
-                    Icons.local_shipping,
-                    color: Colors.orange,
-                    size: 60,
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    "Seja bem-vindo!",
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 26,
-                      fontWeight: FontWeight.bold,
+                  // 🔶 CABEÇALHO
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    height: 64,
+                    child: Row(
+                      children: [
+                        // BOTÃO VOLTAR
+                        IconButton(
+                          icon: const Icon(Icons.arrow_back_ios,
+                              color: Colors.orange),
+                          onPressed: () => Navigator.pop(context),
+                        ),
+
+                        const Icon(Icons.local_shipping,
+                            color: Colors.orange),
+                        const SizedBox(width: 6),
+                        const Text(
+                          "GLM",
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 18,
+                            color: Colors.orange,
+                          ),
+                        ),
+                        const SizedBox(width: 4),
+                        const Text(
+                          "CARGAS",
+                          style:
+                              TextStyle(fontSize: 18, color: Colors.orange),
+                        ),
+                        const Spacer(),
+
+                        // BOTÃO MENU PERSONALIZADO
+                        IconButton(
+                          icon: const Icon(Icons.menu,
+                              size: 28, color: Colors.orange),
+                          onPressed: () =>
+                              setState(() => _menuAberto = true),
+                        ),
+                      ],
                     ),
                   ),
+
                   const SizedBox(height: 10),
                   const Text(
-                    "Você está conectado à plataforma GLM Cargas",
-                    textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white70, fontSize: 16),
+                    "Cargas disponíveis na sua região",
+                    style:
+                        TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
                   ),
-                  const SizedBox(height: 30),
+                  const SizedBox(height: 10),
 
-                  SizedBox(
-                    width: 180,
-                    height: 48,
-                    child: ElevatedButton(
-                      onPressed: () => _logout(context),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.orange.shade700,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                      child: const Text(
-                        "Sair",
-                        style: TextStyle(fontSize: 18),
+                  // 🔶 LISTA DE VIAGENS
+                  Expanded(
+                    child: viagens.isEmpty
+                        ? const Center(
+                            child: Text("Nenhuma carga disponível"),
+                          )
+                        : ListView.builder(
+                            padding: const EdgeInsets.all(16),
+                            itemCount: viagens.length,
+                            itemBuilder: (context, index) {
+                              final v = viagens[index];
+                              final aberta =
+                                  cardsAbertos.contains(v["id"]);
+
+                              return GestureDetector(
+                                onTap: () => _toggleCard(v["id"]),
+                                child: AnimatedContainer(
+                                  duration:
+                                      const Duration(milliseconds: 250),
+                                  margin:
+                                      const EdgeInsets.only(bottom: 16),
+                                  padding: const EdgeInsets.all(12),
+                                  decoration: BoxDecoration(
+                                    color: aberta
+                                        ? Colors.orange.shade300
+                                        : Colors.orange.shade200,
+                                    borderRadius:
+                                        BorderRadius.circular(16),
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      /// CABEÇALHO DO CARD
+                                      Row(
+                                        children: [
+                                          CircleAvatar(
+                                            backgroundColor: Colors.black,
+                                            child: Text(
+                                              v["empresa"][0],
+                                              style: const TextStyle(
+                                                  color: Colors.white),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                v["empresa"],
+                                                style: const TextStyle(
+                                                  fontWeight:
+                                                      FontWeight.bold,
+                                                ),
+                                              ),
+                                              Text(
+                                                v["produto"],
+                                                style: const TextStyle(
+                                                    fontSize: 12),
+                                              ),
+                                            ],
+                                          ),
+                                          const Spacer(),
+                                          Text(
+                                            "${v["origem_uf"]} → ${v["destino_uf"]}",
+                                          ),
+                                        ],
+                                      ),
+
+                                      if (aberta) ...[
+                                        const SizedBox(height: 12),
+                                        Text(
+                                          "Dimensões: ${v["dimensoes"]}",
+                                          style: const TextStyle(
+                                              fontWeight:
+                                                  FontWeight.bold),
+                                        ),
+                                        Text("Peso: ${v["peso"]} kg"),
+                                        Text("Valor: R\$ ${v["valor"]}"),
+                                        Text(
+                                          "Limite de entrega: ${v["limite_entrega"]}",
+                                        ),
+                                        const SizedBox(height: 10),
+                                        Center(
+                                          child: ElevatedButton(
+                                            onPressed: () {},
+                                            style: ElevatedButton
+                                                .styleFrom(
+                                              backgroundColor:
+                                                  Colors.green,
+                                            ),
+                                            child: const Text(
+                                                "Bate-papo com a empresa"),
+                                          ),
+                                        ),
+                                      ],
+                                    ],
+                                  ),
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+
+                  // 🔶 RODAPÉ REDONDO
+                  ClipRRect(
+                    borderRadius: const BorderRadius.only(
+                      bottomLeft: Radius.circular(20),
+                      bottomRight: Radius.circular(20),
+                    ),
+                    child: Container(
+                      color: Colors.orange.shade300,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      child: Row(
+                        mainAxisAlignment:
+                            MainAxisAlignment.spaceEvenly,
+                        children: [
+                          GestureDetector(
+                            onTap: () {
+                              Navigator.pushNamed(
+                                  context, "/perfilMotorista");
+                            },
+                            child: const Icon(Icons.person,
+                                size: 32, color: Colors.black87),
+                          ),
+                          const Icon(Icons.chat_bubble_outline,
+                              size: 32, color: Colors.black87),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-          ),
-        ],
+
+            // ===============================
+            // 🍔 MENU LATERAL INTERNO
+            // ===============================
+            AnimatedPositioned(
+              duration: const Duration(milliseconds: 250),
+              left: _menuAberto ? 0 : -260,
+              top: 0,
+              bottom: 0,
+              child: MenuLateral(
+                onClose: () {
+                  setState(() => _menuAberto = false);
+                },
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
