@@ -1,3 +1,5 @@
-# flutter_atividade_supabase
+# glmcargas_projeto
 
-A new Flutter project.
+Equipe: Luisa Scherer e Mathuesa de Brum Kruger
+Rodar web, com Chrome ou Edge
+
