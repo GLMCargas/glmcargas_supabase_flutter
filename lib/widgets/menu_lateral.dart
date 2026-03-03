@@ -84,7 +84,7 @@ class MenuLateral extends StatelessWidget {
                 icon: Icons.home_outlined,
                 label: "Página Inicial",
                 onTap: () {
-                  Navigator.pushReplacementNamed(context, "/homeMotorista");
+                  Navigator.pushReplacementNamed(context, "/home");
                 },
               ),
 

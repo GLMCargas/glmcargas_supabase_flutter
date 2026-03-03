@@ -24,6 +24,10 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
 
   Future<void> _carregarDados() async {
     final supabase = Supabase.instance.client;
+
+    if (!mounted) return;
+    setState(() => carregando = true);
+
     var user = supabase.auth.currentUser;
 
     int tentativas = 0;
@@ -33,14 +37,22 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
       tentativas++;
     }
 
-    if (user == null) return;
+    if (user == null) {
+      if (!mounted) return;
+      setState(() {
+        carregando = false;
+        usuario = null; // mantém null pra UI mostrar erro (não spinner)
+        veiculo = null;
+      });
+      return;
+    }
 
     try {
       final dadosUsuario = await supabase
           .from("Usuario_Caminhoneiro")
           .select()
           .eq("id", user.id)
-          .single();
+          .maybeSingle(); // <- melhor que .single()
 
       final dadosVeiculo = await supabase
           .from("Veiculo")
@@ -48,13 +60,15 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
           .eq("Usuario_CaminhoneiroID", user.id)
           .maybeSingle();
 
+      if (!mounted) return;
       setState(() {
-        usuario = dadosUsuario;
+        usuario = dadosUsuario; // pode ser null se não existir registro
         veiculo = dadosVeiculo;
         carregando = false;
       });
     } catch (e) {
       print("Erro ao carregar perfil: $e");
+      if (!mounted) return;
       setState(() => carregando = false);
     }
   }
@@ -99,8 +113,10 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                       children: [
                         // Botão voltar
                         IconButton(
-                          icon: const Icon(Icons.arrow_back_ios,
-                              color: Colors.orange),
+                          icon: const Icon(
+                            Icons.arrow_back_ios,
+                            color: Colors.orange,
+                          ),
                           onPressed: () => Navigator.pop(context),
                         ),
 
@@ -123,8 +139,11 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
 
                         // Botão menu
                         IconButton(
-                          icon: const Icon(Icons.menu,
-                              color: Colors.orange, size: 28),
+                          icon: const Icon(
+                            Icons.menu,
+                            color: Colors.orange,
+                            size: 28,
+                          ),
                           onPressed: () {
                             setState(() => _menuAberto = true);
                           },
@@ -138,7 +157,8 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                     child: carregando || usuario == null
                         ? const Center(
                             child: CircularProgressIndicator(
-                                color: Colors.orange),
+                              color: Colors.orange,
+                            ),
                           )
                         : SingleChildScrollView(
                             padding: const EdgeInsets.all(24),
@@ -169,13 +189,15 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
 
                                 Container(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 12, vertical: 6),
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: usuario!['status'] == "Aprovado"
                                         ? Colors.green.shade100
                                         : usuario!['status'] == "Reprovado"
-                                            ? Colors.red.shade100
-                                            : Colors.orange.shade100,
+                                        ? Colors.red.shade100
+                                        : Colors.orange.shade100,
                                     borderRadius: BorderRadius.circular(12),
                                   ),
                                   child: Text(
@@ -188,10 +210,14 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
 
                                 _secaoTitulo("Dados pessoais"),
                                 _linhaInfo("Email", usuario!["email"]),
-                                _linhaInfo("Telefone",
-                                    usuario!["telefone"].toString()),
-                                _linhaInfo("Nascimento",
-                                    _formatarData(usuario!["data_nascimento"])),
+                                _linhaInfo(
+                                  "Telefone",
+                                  usuario!["telefone"].toString(),
+                                ),
+                                _linhaInfo(
+                                  "Nascimento",
+                                  _formatarData(usuario!["data_nascimento"]),
+                                ),
                                 _linhaInfo("Gênero", usuario!["genero"]),
 
                                 const SizedBox(height: 25),
@@ -199,17 +225,26 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                                 _secaoTitulo("Veículo cadastrado"),
                                 veiculo == null
                                     ? const Text(
-                                        "Nenhum veículo cadastrado ainda.")
+                                        "Nenhum veículo cadastrado ainda.",
+                                      )
                                     : Column(
                                         children: [
-                                          _linhaInfo("Tipo do veículo",
-                                              veiculo!["TipoVeiculo"]),
-                                          _linhaInfo("Carroceria",
-                                              veiculo!["TipoBau"]),
-                                          _linhaInfo("Placa",
-                                              veiculo!["PlacaVeiculo"]),
-                                          _linhaInfo("RNTRC",
-                                              veiculo!["RNTRC_ANTT"]),
+                                          _linhaInfo(
+                                            "Tipo do veículo",
+                                            veiculo!["TipoVeiculo"],
+                                          ),
+                                          _linhaInfo(
+                                            "Carroceria",
+                                            veiculo!["TipoBau"],
+                                          ),
+                                          _linhaInfo(
+                                            "Placa",
+                                            veiculo!["PlacaVeiculo"],
+                                          ),
+                                          _linhaInfo(
+                                            "RNTRC",
+                                            veiculo!["RNTRC_ANTT"],
+                                          ),
                                         ],
                                       ),
 
@@ -262,8 +297,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
         children: [
-          Text("$label:",
-              style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text("$label:", style: const TextStyle(fontWeight: FontWeight.bold)),
           const SizedBox(width: 8),
           Expanded(child: Text(valor?.toString() ?? "-")),
         ],
