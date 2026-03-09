@@ -32,6 +32,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => const HomeMotoristaScreen(),
         '/perfilMotorista': (context) => const PerfilMotoristaScreen(),
         '/chats': (context) => const ChatsListPage(),
+        '/chat': (context) => const ChatPage(),
         
       },
       home: const LoginPage(),
