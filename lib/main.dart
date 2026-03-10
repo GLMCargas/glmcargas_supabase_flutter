@@ -4,6 +4,8 @@ import 'package:app/screen/homePage.dart';
 import 'package:app/screen/login.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:app/screen/chat_page.dart';
+import 'package:app/screen/chats_list_page.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -29,6 +31,9 @@ class MyApp extends StatelessWidget {
         '/cadastroMotorista': (_) => const SignupPage(),
         '/home': (context) => const HomeMotoristaScreen(),
         '/perfilMotorista': (context) => const PerfilMotoristaScreen(),
+        '/chats': (context) => const ChatsListPage(),
+        '/chat': (context) => const ChatPage(),
+        
       },
       home: const LoginPage(),
     );

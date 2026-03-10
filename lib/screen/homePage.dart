@@ -15,7 +15,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   List<Map<String, dynamic>> viagens = [];
   Set<int> cardsAbertos = {};
 
-  bool _menuAberto = false; 
+  bool _menuAberto = false;
 
   @override
   void initState() {
@@ -42,21 +42,43 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     });
   }
 
-  String formatarData(String iso) {
-  try {
-    final data = DateTime.parse(iso); 
-    final dia = data.day.toString().padLeft(2, '0');
-    final mes = data.month.toString().padLeft(2, '0');
-    final ano = data.year;
-    final hora = data.hour.toString().padLeft(2, '0');
-    final minuto = data.minute.toString().padLeft(2, '0');
+  Future<void> _abrirChat(int viagemId) async {
+    try {
+      final roomId = await supabase.rpc(
+        'create_or_get_chat_room',
+        params: {'p_viagem_id': viagemId},
+      );
 
-    return "$dia/$mes/$ano $hora:$minuto";
-  } catch (e) {
-    print("Erro ao formatar data: $e");
-    return iso;
+      if (!mounted) return;
+
+      Navigator.pushNamed(
+        context,
+        '/chat',
+        arguments: {'roomId': roomId.toString()},
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao abrir chat: $e')));
+    }
   }
-}
+
+  String formatarData(String iso) {
+    try {
+      final data = DateTime.parse(iso);
+      final dia = data.day.toString().padLeft(2, '0');
+      final mes = data.month.toString().padLeft(2, '0');
+      final ano = data.year;
+      final hora = data.hour.toString().padLeft(2, '0');
+      final minuto = data.minute.toString().padLeft(2, '0');
+
+      return "$dia/$mes/$ano $hora:$minuto";
+    } catch (e) {
+      print("Erro ao formatar data: $e");
+      return iso;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -207,7 +229,9 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                         const SizedBox(height: 10),
                                         Center(
                                           child: ElevatedButton(
-                                            onPressed: () {},
+                                            onPressed: () => _abrirChat(
+                                              (v["id"] as num).toInt(),
+                                            ),
                                             style: ElevatedButton.styleFrom(
                                               backgroundColor: Colors.green,
                                             ),
@@ -246,10 +270,15 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                               color: Colors.black87,
                             ),
                           ),
-                          const Icon(
-                            Icons.chat_bubble_outline,
-                            size: 32,
-                            color: Colors.black87,
+                          IconButton(
+                            icon: const Icon(
+                              Icons.chat_bubble_outline,
+                              size: 32,
+                              color: Colors.black87,
+                            ),
+                            onPressed: () {
+                              Navigator.pushNamed(context, "/chats");
+                            },
                           ),
                         ],
                       ),
