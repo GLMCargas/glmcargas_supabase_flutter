@@ -190,6 +190,56 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                             ? const Center(
                                 child: Padding(
                                   padding: EdgeInsets.all(24),
+                        : SingleChildScrollView(
+                            padding: const EdgeInsets.all(24),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.center,
+                              children: [
+                                CircleAvatar(
+                                  radius: 55,
+                                  backgroundImage:
+                                      (usuario!["foto_url"] != null &&
+                                          usuario!["foto_url"]
+                                              .toString()
+                                              .isNotEmpty)
+                                      ? NetworkImage(
+                                          usuario!["foto_url"].toString(),
+                                        )
+                                      : null,
+                                  child:
+                                      (usuario!["foto_url"] == null ||
+                                          usuario!["foto_url"]
+                                              .toString()
+                                              .isEmpty)
+                                      ? const Icon(Icons.person, size: 50)
+                                      : null,
+                                ),
+
+                                const SizedBox(height: 16),
+
+                                Text(
+                                  "${usuario!['nome']} ${usuario!['sobrenome']}",
+                                  style: const TextStyle(
+                                    fontSize: 22,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+
+                                const SizedBox(height: 8),
+
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 12,
+                                    vertical: 6,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: usuario!['status'] == "Aprovado"
+                                        ? Colors.green.shade100
+                                        : usuario!['status'] == "Reprovado"
+                                        ? Colors.red.shade100
+                                        : Colors.orange.shade100,
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
                                   child: Text(
                                     "Não foi possível carregar os dados do perfil.",
                                     textAlign: TextAlign.center,
