@@ -1,5 +1,5 @@
-import 'package:app/screen/cadastro.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class LoginPage extends StatefulWidget {
@@ -12,219 +12,282 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
+  final _passwordFocusNode = FocusNode();
   final _supabase = Supabase.instance.client;
+
   bool _isLoading = false;
 
   Future<void> _login() async {
+    if (_isLoading) return;
+
+    FocusScope.of(context).unfocus();
+
     setState(() => _isLoading = true);
+
     try {
       await _supabase.auth.signInWithPassword(
         email: _emailController.text.trim(),
         password: _passwordController.text.trim(),
       );
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Login realizado com sucesso!')),
-        );
-        await Future.delayed(const Duration(milliseconds: 300));
 
-        final currentUser = _supabase.auth.currentUser;
+      if (!mounted) return;
 
-        if (currentUser == null) {
-          await _supabase.auth.refreshSession();
-        }
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Login realizado com sucesso!')),
+      );
 
-        Navigator.pushReplacementNamed(context, '/home');
+      await Future.delayed(const Duration(milliseconds: 300));
+
+      final currentUser = _supabase.auth.currentUser;
+
+      if (currentUser == null) {
+        await _supabase.auth.refreshSession();
       }
+
+      if (!mounted) return;
+      Navigator.pushReplacementNamed(context, '/home');
     } on AuthException catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(SnackBar(content: Text(e.message)));
     } catch (e) {
+      if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Erro inesperado ao fazer login.')),
       );
     } finally {
-      setState(() => _isLoading = false);
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
     }
   }
 
   @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _passwordFocusNode.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: Stack(
-        fit: StackFit.expand,
-        children: [
-          Image.asset('assets/images/fundocaminhao.jpg', fit: BoxFit.cover),
-          Container(color: Colors.black.withOpacity(0.3)),
+    return Shortcuts(
+      shortcuts: const <ShortcutActivator, Intent>{
+        SingleActivator(LogicalKeyboardKey.enter): ActivateIntent(),
+        SingleActivator(LogicalKeyboardKey.numpadEnter): ActivateIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          ActivateIntent: CallbackAction<ActivateIntent>(
+            onInvoke: (intent) {
+              final focused = FocusManager.instance.primaryFocus;
 
-          Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Container(
-                width: 400,
-                padding: const EdgeInsets.all(24),
-                decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(20),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.3),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(
-                          Icons.local_shipping_rounded,
-                          color: Colors.orange,
-                          size: 30,
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          "GLM CARGAS",
-                          style: TextStyle(
-                            color: Colors.orange.shade600,
-                            fontWeight: FontWeight.bold,
-                            fontSize: 22,
-                            letterSpacing: 1,
+              if (focused == null) return null;
+
+              if (_isLoading) return null;
+
+              if (_emailController.text.trim().isEmpty ||
+                  _passwordController.text.trim().isEmpty) {
+                return null;
+              }
+
+              _login();
+              return null;
+            },
+          ),
+        },
+        child: Focus(
+          autofocus: true,
+          child: Scaffold(
+            body: Stack(
+              fit: StackFit.expand,
+              children: [
+                Image.asset('assets/images/fundocaminhao.jpg', fit: BoxFit.cover),
+                Container(color: Colors.black.withOpacity(0.3)),
+                Center(
+                  child: SingleChildScrollView(
+                    padding: const EdgeInsets.all(20),
+                    child: Container(
+                      width: 400,
+                      padding: const EdgeInsets.all(24),
+                      decoration: BoxDecoration(
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(20),
+                        boxShadow: [
+                          BoxShadow(
+                            color: Colors.black.withOpacity(0.3),
+                            blurRadius: 8,
+                            offset: const Offset(0, 4),
                           ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 30),
-
-                    const Text(
-                      "LOGIN",
-                      style: TextStyle(
-                        color: Colors.orange,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 26,
-                        letterSpacing: 1.2,
+                        ],
                       ),
-                    ),
-                    const SizedBox(height: 30),
-
-                    TextField(
-                      controller: _emailController,
-                      decoration: InputDecoration(
-                        labelText: 'Email',
-                        prefixIcon: const Icon(
-                          Icons.email_outlined,
-                          color: Colors.white70,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.1),
-                        labelStyle: const TextStyle(color: Colors.white),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.6),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.orange),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 16),
-
-                    TextField(
-                      controller: _passwordController,
-                      obscureText: true,
-                      decoration: InputDecoration(
-                        labelText: 'Senha',
-                        prefixIcon: const Icon(
-                          Icons.lock_outline,
-                          color: Colors.white70,
-                        ),
-                        filled: true,
-                        fillColor: Colors.white.withOpacity(0.1),
-                        labelStyle: const TextStyle(color: Colors.white),
-                        enabledBorder: OutlineInputBorder(
-                          borderSide: BorderSide(
-                            color: Colors.white.withOpacity(0.6),
-                          ),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        focusedBorder: OutlineInputBorder(
-                          borderSide: const BorderSide(color: Colors.orange),
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                      ),
-                      style: const TextStyle(color: Colors.white),
-                    ),
-                    const SizedBox(height: 24),
-
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        onPressed: _isLoading ? null : _login,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.orange.shade600,
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        icon: const Icon(Icons.lock, color: Colors.white),
-                        label: _isLoading
-                            ? const CircularProgressIndicator(
-                                color: Colors.white,
-                              )
-                            : const Text(
-                                'LOGIN',
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(
+                                Icons.local_shipping_rounded,
+                                color: Colors.orange,
+                                size: 30,
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "GLM CARGAS",
                                 style: TextStyle(
-                                  fontSize: 18,
+                                  color: Colors.orange.shade600,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.white,
+                                  fontSize: 22,
+                                  letterSpacing: 1,
                                 ),
                               ),
-                      ),
-                    ),
-                    const SizedBox(height: 20),
+                            ],
+                          ),
+                          const SizedBox(height: 30),
+                          const Text(
+                            "LOGIN",
+                            style: TextStyle(
+                              color: Colors.orange,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 26,
+                              letterSpacing: 1.2,
+                            ),
+                          ),
+                          const SizedBox(height: 30),
 
-                    TextButton(
-                      onPressed: () {
-                        Navigator.pushNamed(context, '/cadastroMotorista');
-                      },
-                      child: const Text.rich(
-                        TextSpan(
-                          text: "Não tem uma conta? ",
-                          style: TextStyle(color: Colors.white70),
-                          children: [
-                            TextSpan(
-                              text: "CADASTRE-SE",
-                              style: TextStyle(
-                                color: Colors.orange,
-                                fontWeight: FontWeight.bold,
+                          TextField(
+                            controller: _emailController,
+                            textInputAction: TextInputAction.next,
+                            keyboardType: TextInputType.emailAddress,
+                            onSubmitted: (_) {
+                              FocusScope.of(context).requestFocus(_passwordFocusNode);
+                            },
+                            decoration: InputDecoration(
+                              labelText: 'Email',
+                              prefixIcon: const Icon(
+                                Icons.email_outlined,
+                                color: Colors.white70,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.1),
+                              labelStyle: const TextStyle(color: Colors.white),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Colors.white.withOpacity(0.6),
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(color: Colors.orange),
+                                borderRadius: BorderRadius.circular(10),
                               ),
                             ),
-                          ],
-                        ),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(height: 16),
+
+                          TextField(
+                            controller: _passwordController,
+                            focusNode: _passwordFocusNode,
+                            obscureText: true,
+                            textInputAction: TextInputAction.done,
+                            onSubmitted: (_) => _login(),
+                            decoration: InputDecoration(
+                              labelText: 'Senha',
+                              prefixIcon: const Icon(
+                                Icons.lock_outline,
+                                color: Colors.white70,
+                              ),
+                              filled: true,
+                              fillColor: Colors.white.withOpacity(0.1),
+                              labelStyle: const TextStyle(color: Colors.white),
+                              enabledBorder: OutlineInputBorder(
+                                borderSide: BorderSide(
+                                  color: Colors.white.withOpacity(0.6),
+                                ),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderSide: const BorderSide(color: Colors.orange),
+                                borderRadius: BorderRadius.circular(10),
+                              ),
+                            ),
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                          const SizedBox(height: 24),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: ElevatedButton.icon(
+                              onPressed: _isLoading ? null : _login,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.orange.shade600,
+                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                              icon: const Icon(Icons.lock, color: Colors.white),
+                              label: _isLoading
+                                  ? const SizedBox(
+                                      width: 22,
+                                      height: 22,
+                                      child: CircularProgressIndicator(
+                                        color: Colors.white,
+                                        strokeWidth: 2.5,
+                                      ),
+                                    )
+                                  : const Text(
+                                      'LOGIN',
+                                      style: TextStyle(
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.bold,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+
+                          TextButton(
+                            onPressed: () {
+                              Navigator.pushNamed(context, '/cadastroMotorista');
+                            },
+                            child: const Text.rich(
+                              TextSpan(
+                                text: "Não tem uma conta? ",
+                                style: TextStyle(color: Colors.white70),
+                                children: [
+                                  TextSpan(
+                                    text: "CADASTRE-SE",
+                                    style: TextStyle(
+                                      color: Colors.orange,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+
+                          const SizedBox(height: 10),
+                          const Text(
+                            "Ao acessar a conta você concorda com nossos termos de uso.",
+                            textAlign: TextAlign.center,
+                            style: TextStyle(color: Colors.white60, fontSize: 12),
+                          ),
+                        ],
                       ),
                     ),
-
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Ao acessar a conta você concorda com nossos termos de uso.",
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white60, fontSize: 12),
-                    ),
-                  ],
+                  ),
                 ),
-              ),
+              ],
             ),
           ),
-        ],
+        ),
       ),
     );
   }

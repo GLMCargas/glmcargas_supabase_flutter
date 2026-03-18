@@ -260,14 +260,18 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                       child: Row(
                         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                         children: [
-                          GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(context, "/perfilMotorista");
-                            },
-                            child: const Icon(
-                              Icons.person,
-                              size: 32,
-                              color: Colors.black87,
+                          MouseRegion(
+                            cursor: SystemMouseCursors.click,
+                            child: GestureDetector(
+                              onTap: () => Navigator.pushNamed(
+                                context,
+                                '/perfilMotorista',
+                              ),
+                              child: const Icon(
+                                Icons.person_outline,
+                                size: 32,
+                                color: Colors.black87,
+                              ),
                             ),
                           ),
                           IconButton(

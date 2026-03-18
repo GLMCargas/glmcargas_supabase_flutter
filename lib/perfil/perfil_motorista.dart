@@ -41,7 +41,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
       if (!mounted) return;
       setState(() {
         carregando = false;
-        usuario = null; // mantém null pra UI mostrar erro (não spinner)
+        usuario = null;
         veiculo = null;
       });
       return;
@@ -52,7 +52,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
           .from("Usuario_Caminhoneiro")
           .select()
           .eq("id", user.id)
-          .maybeSingle(); // <- melhor que .single()
+          .maybeSingle();
 
       final dadosVeiculo = await supabase
           .from("Veiculo")
@@ -62,7 +62,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
 
       if (!mounted) return;
       setState(() {
-        usuario = dadosUsuario; // pode ser null se não existir registro
+        usuario = dadosUsuario;
         veiculo = dadosVeiculo;
         carregando = false;
       });
@@ -80,6 +80,37 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
     return "${partes[2]}/${partes[1]}/${partes[0]}";
   }
 
+  Widget _footerIcon({
+    required IconData icon,
+    required VoidCallback onTap,
+    bool ativo = false,
+  }) {
+    return MouseRegion(
+      cursor: SystemMouseCursors.click,
+      child: GestureDetector(
+        onTap: onTap,
+        child: ativo
+            ? Container(
+                padding: const EdgeInsets.all(10),
+                decoration: const BoxDecoration(
+                  color: Colors.black,
+                  shape: BoxShape.circle,
+                ),
+                child: Icon(
+                  icon,
+                  size: 26,
+                  color: Colors.white,
+                ),
+              )
+            : Icon(
+                icon,
+                size: 32,
+                color: Colors.black87,
+              ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -87,11 +118,9 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
       body: Center(
         child: Stack(
           children: [
-            // =======================================
-            // 📱 CONTAINER PRINCIPAL (tela branca)
-            // =======================================
             Container(
               width: 430,
+              height: MediaQuery.of(context).size.height * 0.95,
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
@@ -105,13 +134,11 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
               ),
               child: Column(
                 children: [
-                  // ------------------ CABEÇALHO ---------------------
                   Container(
                     height: 64,
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     child: Row(
                       children: [
-                        // Botão voltar
                         IconButton(
                           icon: const Icon(
                             Icons.arrow_back_ios,
@@ -119,7 +146,6 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                           ),
                           onPressed: () => Navigator.pop(context),
                         ),
-
                         const Icon(Icons.local_shipping, color: Colors.orange),
                         const SizedBox(width: 6),
                         const Text(
@@ -136,130 +162,168 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                           style: TextStyle(color: Colors.orange, fontSize: 18),
                         ),
                         const Spacer(),
-
-                        // Botão menu
-                        IconButton(
-                          icon: const Icon(
-                            Icons.menu,
-                            color: Colors.orange,
-                            size: 28,
+                        MouseRegion(
+                          cursor: SystemMouseCursors.click,
+                          child: IconButton(
+                            icon: const Icon(
+                              Icons.menu,
+                              color: Colors.orange,
+                              size: 28,
+                            ),
+                            onPressed: () {
+                              setState(() => _menuAberto = true);
+                            },
                           ),
-                          onPressed: () {
-                            setState(() => _menuAberto = true);
-                          },
                         ),
                       ],
                     ),
                   ),
 
-                  // ------------------ CONTEÚDO ---------------------
                   Expanded(
-                    child: carregando || usuario == null
+                    child: carregando
                         ? const Center(
                             child: CircularProgressIndicator(
                               color: Colors.orange,
                             ),
                           )
-                        : SingleChildScrollView(
-                            padding: const EdgeInsets.all(24),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.center,
-                              children: [
-                                CircleAvatar(
-                                  radius: 55,
-                                  backgroundImage: usuario!["foto_url"] != null
-                                      ? NetworkImage(usuario!["foto_url"])
-                                      : null,
-                                  child: usuario!["foto_url"] == null
-                                      ? const Icon(Icons.person, size: 50)
-                                      : null,
-                                ),
-
-                                const SizedBox(height: 16),
-
-                                Text(
-                                  "${usuario!['nome']} ${usuario!['sobrenome']}",
-                                  style: const TextStyle(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-
-                                const SizedBox(height: 8),
-
-                                Container(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 12,
-                                    vertical: 6,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: usuario!['status'] == "Aprovado"
-                                        ? Colors.green.shade100
-                                        : usuario!['status'] == "Reprovado"
-                                        ? Colors.red.shade100
-                                        : Colors.orange.shade100,
-                                    borderRadius: BorderRadius.circular(12),
-                                  ),
+                        : usuario == null
+                            ? const Center(
+                                child: Padding(
+                                  padding: EdgeInsets.all(24),
                                   child: Text(
-                                    "Status: ${usuario!['status'] ?? "Pendente"}",
-                                    style: const TextStyle(fontSize: 16),
+                                    "Não foi possível carregar os dados do perfil.",
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(fontSize: 16),
                                   ),
                                 ),
-
-                                const SizedBox(height: 20),
-
-                                _secaoTitulo("Dados pessoais"),
-                                _linhaInfo("Email", usuario!["email"]),
-                                _linhaInfo(
-                                  "Telefone",
-                                  usuario!["telefone"].toString(),
-                                ),
-                                _linhaInfo(
-                                  "Nascimento",
-                                  _formatarData(usuario!["data_nascimento"]),
-                                ),
-                                _linhaInfo("Gênero", usuario!["genero"]),
-
-                                const SizedBox(height: 25),
-
-                                _secaoTitulo("Veículo cadastrado"),
-                                veiculo == null
-                                    ? const Text(
-                                        "Nenhum veículo cadastrado ainda.",
-                                      )
-                                    : Column(
-                                        children: [
-                                          _linhaInfo(
-                                            "Tipo do veículo",
-                                            veiculo!["TipoVeiculo"],
-                                          ),
-                                          _linhaInfo(
-                                            "Carroceria",
-                                            veiculo!["TipoBau"],
-                                          ),
-                                          _linhaInfo(
-                                            "Placa",
-                                            veiculo!["PlacaVeiculo"],
-                                          ),
-                                          _linhaInfo(
-                                            "RNTRC",
-                                            veiculo!["RNTRC_ANTT"],
-                                          ),
-                                        ],
+                              )
+                            : SingleChildScrollView(
+                                padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.center,
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 55,
+                                      backgroundImage: usuario!["foto_url"] != null
+                                          ? NetworkImage(usuario!["foto_url"])
+                                          : null,
+                                      child: usuario!["foto_url"] == null
+                                          ? const Icon(Icons.person, size: 50)
+                                          : null,
+                                    ),
+                                    const SizedBox(height: 16),
+                                    Text(
+                                      "${usuario!['nome'] ?? ""} ${usuario!['sobrenome'] ?? ""}"
+                                          .trim(),
+                                      textAlign: TextAlign.center,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.bold,
                                       ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 12,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: usuario!['status'] == "Aprovado"
+                                            ? Colors.green.shade100
+                                            : usuario!['status'] == "Reprovado"
+                                                ? Colors.red.shade100
+                                                : Colors.orange.shade100,
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: Text(
+                                        "Status: ${usuario!['status'] ?? "Pendente"}",
+                                        style: const TextStyle(fontSize: 16),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 20),
+                                    _secaoTitulo("Dados pessoais"),
+                                    _linhaInfo("Email", usuario!["email"]),
+                                    _linhaInfo(
+                                      "Telefone",
+                                      usuario!["telefone"],
+                                    ),
+                                    _linhaInfo(
+                                      "Nascimento",
+                                      _formatarData(usuario!["data_nascimento"]),
+                                    ),
+                                    _linhaInfo("Gênero", usuario!["genero"]),
+                                    const SizedBox(height: 25),
+                                    _secaoTitulo("Veículo cadastrado"),
+                                    veiculo == null
+                                        ? const Padding(
+                                            padding: EdgeInsets.symmetric(vertical: 8),
+                                            child: Text(
+                                              "Nenhum veículo cadastrado ainda.",
+                                            ),
+                                          )
+                                        : Column(
+                                            children: [
+                                              _linhaInfo(
+                                                "Tipo do veículo",
+                                                veiculo!["TipoVeiculo"],
+                                              ),
+                                              _linhaInfo(
+                                                "Carroceria",
+                                                veiculo!["TipoBau"],
+                                              ),
+                                              _linhaInfo(
+                                                "Placa",
+                                                veiculo!["PlacaVeiculo"],
+                                              ),
+                                              _linhaInfo(
+                                                "RNTRC",
+                                                veiculo!["RNTRC_ANTT"],
+                                              ),
+                                            ],
+                                          ),
+                                    const SizedBox(height: 16),
+                                  ],
+                                ),
+                              ),
+                  ),
 
-                                const SizedBox(height: 40),
-                              ],
-                            ),
+                  Container(
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                    decoration: BoxDecoration(
+                      color: Colors.orange.shade300,
+                      borderRadius: const BorderRadius.only(
+                        bottomLeft: Radius.circular(20),
+                        bottomRight: Radius.circular(20),
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _footerIcon(
+                          icon: Icons.home_outlined,
+                          onTap: () =>
+                              Navigator.pushReplacementNamed(context, '/home'),
+                        ),
+                        _footerIcon(
+                          icon: Icons.person_outline,
+                          ativo: true,
+                          onTap: () => Navigator.pushReplacementNamed(
+                            context,
+                            '/perfilMotorista',
                           ),
+                        ),
+                        _footerIcon(
+                          icon: Icons.chat_bubble_outline,
+                          onTap: () =>
+                              Navigator.pushReplacementNamed(context, '/chats'),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
 
-            // =======================================
-            // 🍔 MENU LATERAL INTERNO
-            // =======================================
             AnimatedPositioned(
               duration: const Duration(milliseconds: 250),
               left: _menuAberto ? 0 : -260,
@@ -296,10 +360,16 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
       width: double.infinity,
       padding: const EdgeInsets.symmetric(vertical: 8),
       child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text("$label:", style: const TextStyle(fontWeight: FontWeight.bold)),
+          Text(
+            "$label:",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
           const SizedBox(width: 8),
-          Expanded(child: Text(valor?.toString() ?? "-")),
+          Expanded(
+            child: Text(valor?.toString() ?? "-"),
+          ),
         ],
       ),
     );
