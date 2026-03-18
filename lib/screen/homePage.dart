@@ -13,32 +13,113 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   final supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> viagens = [];
-  Set<int> cardsAbertos = {};
-
+  Set<dynamic> cardsAbertos = {};
   bool _menuAberto = false;
+
+  String? ufMotorista;
+  String? ufSelecionada;
+
+  final List<String> ufs = const [
+    "Todas",
+    "AC",
+    "AL",
+    "AP",
+    "AM",
+    "BA",
+    "CE",
+    "DF",
+    "ES",
+    "GO",
+    "MA",
+    "MT",
+    "MS",
+    "MG",
+    "PA",
+    "PB",
+    "PR",
+    "PE",
+    "PI",
+    "RJ",
+    "RN",
+    "RS",
+    "RO",
+    "RR",
+    "SC",
+    "SP",
+    "SE",
+    "TO",
+  ];
 
   @override
   void initState() {
     super.initState();
-    _carregarViagens();
+    _inicializarHome();
+  }
+
+  Future<void> _inicializarHome() async {
+    await _carregarUfMotorista();
+    await _carregarViagens();
+  }
+
+  Future<void> _carregarUfMotorista() async {
+    try {
+      final user = supabase.auth.currentUser;
+
+      if (user == null) {
+        setState(() {
+          ufSelecionada = "Todas";
+        });
+        return;
+      }
+
+      final endereco = await supabase
+          .from("Endereço")
+          .select("UF")
+          .eq("Usuario_CaminhoneiroID", user.id)
+          .maybeSingle();
+
+      final uf = endereco?["UF"]?.toString().trim().toUpperCase();
+
+      setState(() {
+        ufMotorista = uf;
+        ufSelecionada = (uf != null && uf.isNotEmpty) ? uf : "Todas";
+      });
+    } catch (e) {
+      debugPrint("❌ Erro ao carregar UF do motorista: $e");
+      setState(() {
+        ufSelecionada = "Todas";
+      });
+    }
   }
 
   Future<void> _carregarViagens() async {
     try {
-      final response = await supabase.from("Viagens").select();
+      dynamic response;
+
+      if (ufSelecionada != null && ufSelecionada != "Todas") {
+        response = await supabase
+            .from("Viagens")
+            .select()
+            .eq("origem_uf", ufSelecionada!);
+      } else {
+        response = await supabase.from("Viagens").select();
+      }
+
       setState(() {
         viagens = List<Map<String, dynamic>>.from(response);
       });
     } catch (e) {
-      print("❌ Erro ao carregar viagens: $e");
+      debugPrint("❌ Erro ao carregar viagens: $e");
     }
   }
 
-  void _toggleCard(int id) {
+  void _toggleCard(dynamic id) {
     setState(() {
-      cardsAbertos.contains(id)
-          ? cardsAbertos.remove(id)
-          : cardsAbertos.add(id);
+      if (cardsAbertos.contains(id)) {
+        cardsAbertos.remove(id);
+      } else {
+        cardsAbertos.add(id);
+      }
     });
   }
 
@@ -58,9 +139,10 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao abrir chat: $e')));
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Erro ao abrir chat: $e')),
+      );
     }
   }
 
@@ -75,7 +157,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
 
       return "$dia/$mes/$ano $hora:$minuto";
     } catch (e) {
-      print("Erro ao formatar data: $e");
+      debugPrint("Erro ao formatar data: $e");
       return iso;
     }
   }
@@ -92,11 +174,11 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(20),
-                boxShadow: [
+                boxShadow: const [
                   BoxShadow(
                     color: Colors.black12,
                     blurRadius: 12,
-                    offset: const Offset(0, 4),
+                    offset: Offset(0, 4),
                   ),
                 ],
               ),
@@ -114,7 +196,6 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                           ),
                           onPressed: () => Navigator.pop(context),
                         ),
-
                         const Icon(Icons.local_shipping, color: Colors.orange),
                         const SizedBox(width: 6),
                         const Text(
@@ -128,7 +209,10 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                         const SizedBox(width: 4),
                         const Text(
                           "CARGAS",
-                          style: TextStyle(fontSize: 18, color: Colors.orange),
+                          style: TextStyle(
+                            fontSize: 18,
+                            color: Colors.orange,
+                          ),
                         ),
                         const Spacer(),
                         IconButton(
@@ -142,17 +226,54 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                       ],
                     ),
                   ),
-
                   const SizedBox(height: 10),
                   const Text(
-                    "Cargas disponíveis na sua região",
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+                    "Cargas disponíveis",
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w500,
+                    ),
                   ),
                   const SizedBox(height: 10),
-
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: DropdownButtonFormField<String>(
+                      value: ufSelecionada ?? "Todas",
+                      decoration: InputDecoration(
+                        labelText: "Filtrar por UF",
+                        filled: true,
+                        fillColor: Colors.white,
+                        contentPadding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 14,
+                        ),
+                        border: OutlineInputBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                      items: ufs.map((uf) {
+                        return DropdownMenuItem<String>(
+                          value: uf,
+                          child: Text(
+                            uf == "Todas" ? "Todas as UFs" : uf,
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (value) async {
+                        setState(() {
+                          ufSelecionada = value ?? "Todas";
+                          cardsAbertos.clear();
+                        });
+                        await _carregarViagens();
+                      },
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Expanded(
                     child: viagens.isEmpty
-                        ? const Center(child: Text("Nenhuma carga disponível"))
+                        ? const Center(
+                            child: Text("Nenhuma carga disponível"),
+                          )
                         : ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: viagens.length,
@@ -181,50 +302,55 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                           CircleAvatar(
                                             backgroundColor: Colors.black,
                                             child: Text(
-                                              v["empresa"][0],
+                                              (v["empresa"] ?? "?")
+                                                  .toString()
+                                                  .substring(0, 1)
+                                                  .toUpperCase(),
                                               style: const TextStyle(
                                                 color: Colors.white,
                                               ),
                                             ),
                                           ),
                                           const SizedBox(width: 12),
-                                          Column(
-                                            crossAxisAlignment:
-                                                CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                v["empresa"],
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  (v["empresa"] ?? "")
+                                                      .toString(),
+                                                  style: const TextStyle(
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
                                                 ),
-                                              ),
-                                              Text(
-                                                v["produto"],
-                                                style: const TextStyle(
-                                                  fontSize: 12,
+                                                Text(
+                                                  (v["produto"] ?? "")
+                                                      .toString(),
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                  ),
                                                 ),
-                                              ),
-                                            ],
+                                              ],
+                                            ),
                                           ),
-                                          const Spacer(),
                                           Text(
-                                            "${v["origem_uf"]} → ${v["destino_uf"]}",
+                                            "${v["origem_uf"] ?? "-"} → ${v["destino_uf"] ?? "-"}",
                                           ),
                                         ],
                                       ),
-
                                       if (aberta) ...[
                                         const SizedBox(height: 12),
                                         Text(
-                                          "Dimensões: ${v["dimensoes"]}",
+                                          "Dimensões: ${v["dimensoes"] ?? "-"}",
                                           style: const TextStyle(
                                             fontWeight: FontWeight.bold,
                                           ),
                                         ),
-                                        Text("Peso: ${v["peso"]} kg"),
-                                        Text("Valor: R\$ ${v["valor"]}"),
+                                        Text("Peso: ${v["peso"] ?? "-"} kg"),
+                                        Text("Valor: R\$ ${v["valor"] ?? "-"}"),
                                         Text(
-                                          "Limite de entrega: ${formatarData(v["data_limite_entrega"])}",
+                                          "Limite de entrega: ${formatarData((v["data_limite_entrega"] ?? "").toString())}",
                                         ),
                                         const SizedBox(height: 10),
                                         Center(
@@ -248,7 +374,6 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                             },
                           ),
                   ),
-
                   ClipRRect(
                     borderRadius: const BorderRadius.only(
                       bottomLeft: Radius.circular(20),
@@ -287,7 +412,6 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                 ],
               ),
             ),
-
             AnimatedPositioned(
               duration: const Duration(milliseconds: 250),
               left: _menuAberto ? 0 : -260,

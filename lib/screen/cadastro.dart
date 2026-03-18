@@ -73,23 +73,31 @@ class _SignupPageState extends State<SignupPage> {
       final bytes = await pickedFile.readAsBytes();
       setState(() {
         _fotoSelecionadaWeb = bytes;
-        _fotoSelecionada = null; 
+        _fotoSelecionada = null;
       });
     } else {
       setState(() {
         _fotoSelecionada = File(pickedFile.path);
-        _fotoSelecionadaWeb = null; 
+        _fotoSelecionadaWeb = null;
       });
     }
   }
 
   Future<String?> _uploadFoto(String userId) async {
-    if (_fotoSelecionada == null) return null;
-
     final supabase = Supabase.instance.client;
-    final fileBytes = await _fotoSelecionada!.readAsBytes();
+
+    if (_fotoSelecionada == null && _fotoSelecionadaWeb == null) {
+      return null;
+    }
 
     final filePath = "fotos_motoristas/$userId.jpg";
+
+    Uint8List fileBytes;
+    if (kIsWeb) {
+      fileBytes = _fotoSelecionadaWeb!;
+    } else {
+      fileBytes = await _fotoSelecionada!.readAsBytes();
+    }
 
     await supabase.storage
         .from("fotos_motoristas")
@@ -102,86 +110,92 @@ class _SignupPageState extends State<SignupPage> {
           ),
         );
 
-    return supabase.storage.from("fotos_motoristas").getPublicUrl(filePath);
+    final fotoUrl = supabase.storage
+        .from("fotos_motoristas")
+        .getPublicUrl(filePath);
+
+    return fotoUrl;
   }
 
-  Future<void> _signUp() async {
-    print("▶️ Iniciando cadastro...");
+ Future<void> _signUp() async {
+  print("▶️ Iniciando cadastro...");
 
-    if (!_formKey.currentState!.validate()) return;
+  if (!_formKey.currentState!.validate()) return;
 
-    if (_generoSelecionado == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Selecione um gênero.")));
-      return;
+  if (_generoSelecionado == null) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Selecione um gênero.")),
+    );
+    return;
+  }
+
+  setState(() => _isLoading = true);
+
+  try {
+    final supabase = Supabase.instance.client;
+
+    final partes = _nascimentoController.text.split("/");
+    final dataFormatada = "${partes[2]}-${partes[1]}-${partes[0]}";
+
+    final signUpResponse = await supabase.auth.signUp(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
+
+    final user = signUpResponse.user;
+
+    if (user == null) {
+      throw "Erro ao criar usuário no AUTH.";
     }
 
-    setState(() => _isLoading = true);
+    final userId = user.id;
 
-    try {
-      final supabase = Supabase.instance.client;
+    await supabase.auth.signInWithPassword(
+      email: _emailController.text.trim(),
+      password: _passwordController.text.trim(),
+    );
 
-      final partes = _nascimentoController.text.split("/");
-      final dataFormatada = "${partes[2]}-${partes[1]}-${partes[0]}";
+    final fotoUrl = await _uploadFoto(userId);
 
-      final signUpResponse = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+    final dados = {
+      "id": userId,
+      "email": _emailController.text.trim(),
+      "nome": _nomeController.text.trim(),
+      "sobrenome": _sobrenomeController.text.trim(),
+      "cpf_cnpj": _cpfController.text.trim(),
+      "data_nascimento": dataFormatada,
+      "telefone": _telefoneController.text.trim(),
+      "genero": _generoSelecionado,
+      "foto_url": fotoUrl,
+    };
 
-      final user = signUpResponse.user;
+    await supabase.from("Usuario_Caminhoneiro").insert(dados);
 
-      if (user == null) {
-        throw "Erro ao criar usuário no AUTH.";
-      }
-
-      final userId = user.id;
-
-      await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
-
-      final filePath = "fotos_motoristas/$userId.jpg";
-      final dados = {
-        "id": userId, 
-        "email": _emailController.text.trim(),
-        "nome": _nomeController.text.trim(),
-        "sobrenome": _sobrenomeController.text.trim(),
-        "cpf_cnpj": _cpfController.text.trim(),
-        "data_nascimento": dataFormatada,
-        "telefone": _telefoneController.text.trim(),
-        "genero": _generoSelecionado,
-        "foto_url": filePath,
-      };
-
-      await supabase.from("Usuario_Caminhoneiro").insert(dados);
-
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("Cadastro realizado com sucesso!")),
-        );
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
-        );
-      }
-    } catch (e, stack) {
-      print("ERRO NO CADASTRO:");
-      print(e);
-      print(stack);
-
+    if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text("Erro ao cadastrar: $e"),
-          backgroundColor: Colors.red,
-        ),
+        const SnackBar(content: Text("Cadastro realizado com sucesso!")),
       );
-    } finally {
-      setState(() => _isLoading = false);
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
+      );
     }
+  } catch (e, stack) {
+    print("ERRO NO CADASTRO:");
+    print(e);
+    print(stack);
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text("Erro ao cadastrar: $e"),
+        backgroundColor: Colors.red,
+      ),
+    );
+  } finally {
+    setState(() => _isLoading = false);
   }
+}
 
   @override
   Widget build(BuildContext context) {

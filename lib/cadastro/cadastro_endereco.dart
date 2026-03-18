@@ -53,7 +53,7 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
       "Rua": _ruaController.text.trim(),
       "Bairro": _bairroController.text.trim(),
       "Cidade": _cidadeController.text.trim(),
-      "UF": _ufController.text.trim(),
+      "UF": _ufController.text.trim().toUpperCase(),
       "Numero": _semNumero
           ? 0
           : int.tryParse(
