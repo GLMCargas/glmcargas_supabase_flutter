@@ -34,9 +34,9 @@ class _ChatsListPageState extends State<ChatsListPage> {
       rooms = (data as List).cast<Map<String, dynamic>>();
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Erro ao carregar chats: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Erro ao carregar chats: $e')));
     } finally {
       if (mounted) setState(() => loading = false);
     }
@@ -66,14 +66,24 @@ class _ChatsListPageState extends State<ChatsListPage> {
               children: [
                 // HEADER
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 14,
+                  ),
                   child: Row(
                     children: [
                       IconButton(
                         onPressed: () => Navigator.pop(context),
-                        icon: const Icon(Icons.arrow_back_ios_new, color: Colors.orange),
+                        icon: const Icon(
+                          Icons.arrow_back_ios_new,
+                          color: Colors.orange,
+                        ),
                       ),
-                      const Icon(Icons.local_shipping, color: Colors.orange, size: 28),
+                      const Icon(
+                        Icons.local_shipping,
+                        color: Colors.orange,
+                        size: 28,
+                      ),
                       const SizedBox(width: 6),
                       const Text(
                         'GLM',
@@ -86,10 +96,7 @@ class _ChatsListPageState extends State<ChatsListPage> {
                       const SizedBox(width: 4),
                       const Text(
                         'CARGAS',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontSize: 20,
-                        ),
+                        style: TextStyle(color: Colors.orange, fontSize: 20),
                       ),
                       const Spacer(),
                       IconButton(
@@ -104,10 +111,7 @@ class _ChatsListPageState extends State<ChatsListPage> {
                   padding: EdgeInsets.only(bottom: 8),
                   child: Text(
                     'Meus chats',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.w600,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
                   ),
                 ),
 
@@ -115,89 +119,107 @@ class _ChatsListPageState extends State<ChatsListPage> {
                   child: loading
                       ? const Center(child: CircularProgressIndicator())
                       : rooms.isEmpty
-                          ? const Center(
-                              child: Text(
-                                'Você ainda não tem conversas.',
-                                style: TextStyle(fontSize: 16),
-                              ),
-                            )
-                          : ListView.builder(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                              itemCount: rooms.length,
-                              itemBuilder: (context, i) {
-                                final r = rooms[i];
-                                final roomId = r['id'].toString();
-                                final viagem = (r['Viagens'] as Map?) ?? {};
+                      ? const Center(
+                          child: Text(
+                            'Você ainda não tem conversas.',
+                            style: TextStyle(fontSize: 16),
+                          ),
+                        )
+                      : ListView.builder(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 8,
+                          ),
+                          itemCount: rooms.length,
+                          itemBuilder: (context, i) {
+                            final r = rooms[i];
+                            final roomId = r['id'].toString();
+                            final viagem = (r['Viagens'] as Map?) ?? {};
 
-                                final empresa = (viagem['empresa'] ?? 'Empresa').toString();
-                                final origemCidade = (viagem['origem_cidade'] ?? '').toString();
-                                final origemUf = (viagem['origem_uf'] ?? '').toString();
-                                final destinoCidade = (viagem['destino_cidade'] ?? '').toString();
-                                final destinoUf = (viagem['destino_uf'] ?? '').toString();
+                            final empresa = (viagem['empresa'] ?? 'Empresa')
+                                .toString();
+                            final origemCidade = (viagem['origem_cidade'] ?? '')
+                                .toString();
+                            final origemUf = (viagem['origem_uf'] ?? '')
+                                .toString();
+                            final destinoCidade =
+                                (viagem['destino_cidade'] ?? '').toString();
+                            final destinoUf = (viagem['destino_uf'] ?? '')
+                                .toString();
 
-                                final subtitle = (origemCidade.isEmpty && destinoCidade.isEmpty)
-                                    ? 'Viagem #${r['viagem_id']}'
-                                    : '$origemCidade-$origemUf → $destinoCidade-$destinoUf';
+                            final subtitle =
+                                (origemCidade.isEmpty && destinoCidade.isEmpty)
+                                ? 'Viagem #${r['viagem_id']}'
+                                : '$origemCidade-$origemUf → $destinoCidade-$destinoUf';
 
-                                return GestureDetector(
-                                  onTap: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/chat',
-                                      arguments: {'roomId': roomId},
-                                    );
-                                  },
-                                  child: Container(
-                                    margin: const EdgeInsets.only(bottom: 14),
-                                    padding: const EdgeInsets.all(14),
-                                    decoration: BoxDecoration(
-                                      color: Colors.orange.shade100,
-                                      borderRadius: BorderRadius.circular(18),
-                                      border: Border.all(color: Colors.orange.shade200),
+                            return GestureDetector(
+                              onTap: () async {
+                                await Navigator.pushNamed(
+                                  context,
+                                  '/chat',
+                                  arguments: {'roomId': roomId},
+                                );
+
+                                if (mounted) {
+                                  _loadRooms();
+                                }
+                              },
+                              child: Container(
+                                margin: const EdgeInsets.only(bottom: 14),
+                                padding: const EdgeInsets.all(14),
+                                decoration: BoxDecoration(
+                                  color: Colors.orange.shade100,
+                                  borderRadius: BorderRadius.circular(18),
+                                  border: Border.all(
+                                    color: Colors.orange.shade200,
+                                  ),
+                                ),
+                                child: Row(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 24,
+                                      backgroundColor: Colors.orange.shade400,
+                                      child: Text(
+                                        empresa.isNotEmpty
+                                            ? empresa[0].toUpperCase()
+                                            : 'E',
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
                                     ),
-                                    child: Row(
-                                      children: [
-                                        CircleAvatar(
-                                          radius: 24,
-                                          backgroundColor: Colors.orange.shade400,
-                                          child: Text(
-                                            empresa.isNotEmpty ? empresa[0].toUpperCase() : 'E',
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            empresa,
                                             style: const TextStyle(
-                                              color: Colors.white,
                                               fontWeight: FontWeight.bold,
+                                              fontSize: 15,
                                             ),
                                           ),
-                                        ),
-                                        const SizedBox(width: 12),
-                                        Expanded(
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            children: [
-                                              Text(
-                                                empresa,
-                                                style: const TextStyle(
-                                                  fontWeight: FontWeight.bold,
-                                                  fontSize: 15,
-                                                ),
-                                              ),
-                                              const SizedBox(height: 4),
-                                              Text(
-                                                subtitle,
-                                                style: TextStyle(
-                                                  fontSize: 13,
-                                                  color: Colors.grey.shade700,
-                                                ),
-                                              ),
-                                            ],
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            subtitle,
+                                            style: TextStyle(
+                                              fontSize: 13,
+                                              color: Colors.grey.shade700,
+                                            ),
                                           ),
-                                        ),
-                                        const Icon(Icons.chevron_right, size: 28),
-                                      ],
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                              },
-                            ),
+                                    const Icon(Icons.chevron_right, size: 28),
+                                  ],
+                                ),
+                              ),
+                            );
+                          },
+                        ),
                 ),
 
                 // RODAPÉ
@@ -213,15 +235,47 @@ class _ChatsListPageState extends State<ChatsListPage> {
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/home'),
-                        child: const Icon(Icons.home_outlined, size: 32, color: Colors.black87),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/home'),
+                          child: const Icon(
+                            Icons.home_outlined,
+                            size: 32,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ),
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/perfilMotorista'),
-                        child: const Icon(Icons.person_outline, size: 32, color: Colors.black87),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () =>
+                              Navigator.pushNamed(context, '/perfilMotorista'),
+                          child: const Icon(
+                            Icons.person_outline,
+                            size: 32,
+                            color: Colors.black87,
+                          ),
+                        ),
                       ),
-                      const Icon(Icons.chat_bubble, size: 32, color: Colors.black87),
+                      MouseRegion(
+                        cursor: SystemMouseCursors.click,
+                        child: GestureDetector(
+                          onTap: () => Navigator.pushNamed(context, '/chats'),
+                          child: Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: const BoxDecoration(
+                              color: Colors.black,
+                              shape: BoxShape.circle,
+                            ),
+                            child: const Icon(
+                              Icons.chat_bubble_outline,
+                              size: 26,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
