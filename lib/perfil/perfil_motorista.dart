@@ -167,10 +167,20 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                               children: [
                                 CircleAvatar(
                                   radius: 55,
-                                  backgroundImage: usuario!["foto_url"] != null
-                                      ? NetworkImage(usuario!["foto_url"])
+                                  backgroundImage:
+                                      (usuario!["foto_url"] != null &&
+                                          usuario!["foto_url"]
+                                              .toString()
+                                              .isNotEmpty)
+                                      ? NetworkImage(
+                                          usuario!["foto_url"].toString(),
+                                        )
                                       : null,
-                                  child: usuario!["foto_url"] == null
+                                  child:
+                                      (usuario!["foto_url"] == null ||
+                                          usuario!["foto_url"]
+                                              .toString()
+                                              .isEmpty)
                                       ? const Icon(Icons.person, size: 50)
                                       : null,
                                 ),
