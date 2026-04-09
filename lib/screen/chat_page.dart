@@ -1,3 +1,4 @@
+import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -108,11 +109,8 @@ class _ChatPageState extends State<ChatPage> {
             if (record.isEmpty) return;
 
             final msg = _ChatMessage.fromMap(record);
-
             final alreadyExists = _messages.any((m) => m.id == msg.id);
-            if (alreadyExists) return;
-
-            if (!mounted) return;
+            if (alreadyExists || !mounted) return;
 
             setState(() {
               _messages.add(msg);
@@ -213,274 +211,177 @@ class _ChatPageState extends State<ChatPage> {
   Widget build(BuildContext context) {
     final userId = _supabase.auth.currentUser?.id;
 
-    return Scaffold(
-      backgroundColor: Colors.orange.shade100,
-      body: SafeArea(
-        child: Center(
-          child: Container(
-            width: 430,
-            height: MediaQuery.of(context).size.height * 0.95,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(22),
-              boxShadow: const [
-                BoxShadow(
-                  color: Colors.black12,
-                  blurRadius: 10,
-                  offset: Offset(0, 4),
-                ),
-              ],
+    return GlmShell(
+      header: GlmHeader(
+        onBack: () async {
+          final popped = await Navigator.maybePop(context);
+          if (!popped && mounted) {
+            Navigator.pushReplacementNamed(context, '/chats');
+          }
+        },
+        trailing: IconButton(
+          onPressed: () => Navigator.pushReplacementNamed(context, '/chats'),
+          icon: const Icon(
+            Icons.chat_bubble_outline_rounded,
+            color: GlmColors.accent,
+          ),
+        ),
+      ),
+      bottomNavigation: const GlmBottomNavigation(
+        current: GlmBottomNavItem.chats,
+      ),
+      body: Padding(
+        padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
+        child: Column(
+          children: [
+            const GlmSectionHeader(
+              title: 'Chat com a empresa',
+              subtitle: 'Converse em tempo real sobre a carga selecionada.',
             ),
-            child: Column(
-              children: [
-                Padding(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 14,
-                  ),
-                  child: Row(
-                    children: [
-                      IconButton(
-                        onPressed: () => Navigator.pop(context),
-                        icon: const Icon(
-                          Icons.arrow_back_ios_new,
-                          color: Colors.orange,
-                        ),
+            const SizedBox(height: 18),
+            Expanded(
+              child: _loading
+                  ? const Center(child: CircularProgressIndicator())
+                  : _roomId == null
+                  ? const Center(
+                      child: Text(
+                        'RoomId nao informado.',
+                        style: TextStyle(color: GlmColors.textMuted),
                       ),
-                      const Icon(
-                        Icons.local_shipping,
-                        color: Colors.orange,
-                        size: 28,
+                    )
+                  : Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFFFFBF7),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(color: GlmColors.border),
                       ),
-                      const SizedBox(width: 6),
-                      const Text(
-                        'GLM',
-                        style: TextStyle(
-                          color: Colors.orange,
-                          fontWeight: FontWeight.bold,
-                          fontSize: 20,
-                        ),
-                      ),
-                      const SizedBox(width: 4),
-                      const Text(
-                        'CARGAS',
-                        style: TextStyle(color: Colors.orange, fontSize: 20),
-                      ),
-                      const Spacer(),
-                      GestureDetector(
-                        onTap: () => Navigator.pushNamed(context, '/chats'),
-                        child: const Icon(
-                          Icons.chat_bubble,
-                          color: Colors.orange,
-                          size: 26,
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                const Padding(
-                  padding: EdgeInsets.only(bottom: 8),
-                  child: Text(
-                    'Chat com a empresa',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w600),
-                  ),
-                ),
-                Expanded(
-                  child: _loading
-                      ? const Center(child: CircularProgressIndicator())
-                      : _roomId == null
-                      ? const Center(child: Text('RoomId não informado'))
-                      : ListView.builder(
-                          controller: _scrollController,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 8,
-                          ),
-                          itemCount: _messages.length,
-                          itemBuilder: (context, i) {
-                            final m = _messages[i];
-                            final isMine =
-                                userId != null && m.senderUserId == userId;
+                      child: ListView.builder(
+                        controller: _scrollController,
+                        padding: const EdgeInsets.all(14),
+                        itemCount: _messages.length,
+                        itemBuilder: (context, i) {
+                          final m = _messages[i];
+                          final isMine =
+                              userId != null && m.senderUserId == userId;
 
-                            return Align(
-                              alignment: isMine
-                                  ? Alignment.centerRight
-                                  : Alignment.centerLeft,
-                              child: Opacity(
-                                opacity: m.isPending ? 0.65 : 1,
-                                child: Container(
-                                  constraints: const BoxConstraints(
-                                    maxWidth: 290,
-                                  ),
-                                  margin: const EdgeInsets.symmetric(
-                                    vertical: 5,
-                                  ),
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 14,
-                                    vertical: 10,
-                                  ),
-                                  decoration: BoxDecoration(
-                                    color: isMine
-                                        ? Colors.orange.shade200
-                                        : Colors.grey.shade200,
-                                    borderRadius: BorderRadius.only(
-                                      topLeft: const Radius.circular(18),
-                                      topRight: const Radius.circular(18),
-                                      bottomLeft: Radius.circular(
-                                        isMine ? 18 : 4,
-                                      ),
-                                      bottomRight: Radius.circular(
-                                        isMine ? 4 : 18,
-                                      ),
+                          return Align(
+                            alignment: isMine
+                                ? Alignment.centerRight
+                                : Alignment.centerLeft,
+                            child: Opacity(
+                              opacity: m.isPending ? 0.65 : 1,
+                              child: Container(
+                                constraints: const BoxConstraints(
+                                  maxWidth: 290,
+                                ),
+                                margin: const EdgeInsets.symmetric(vertical: 5),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 14,
+                                  vertical: 10,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: isMine
+                                      ? const Color(0xFFFFE2C3)
+                                      : Colors.white,
+                                  borderRadius: BorderRadius.only(
+                                    topLeft: const Radius.circular(18),
+                                    topRight: const Radius.circular(18),
+                                    bottomLeft: Radius.circular(
+                                      isMine ? 18 : 4,
+                                    ),
+                                    bottomRight: Radius.circular(
+                                      isMine ? 4 : 18,
                                     ),
                                   ),
-                                  child: Column(
-                                    crossAxisAlignment: isMine
-                                        ? CrossAxisAlignment.end
-                                        : CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        m.message ?? '',
-                                        style: const TextStyle(fontSize: 15),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (m.isPending) ...[
-                                            const SizedBox(
-                                              width: 10,
-                                              height: 10,
-                                              child: CircularProgressIndicator(
-                                                strokeWidth: 1.8,
-                                              ),
-                                            ),
-                                            const SizedBox(width: 6),
-                                          ],
-                                          Text(
-                                            _formatTime(m.createdAt),
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              color: Colors.grey.shade700,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
+                                  border: Border.all(
+                                    color: isMine
+                                        ? GlmColors.border
+                                        : const Color(0xFFE9DED1),
                                   ),
                                 ),
+                                child: Column(
+                                  crossAxisAlignment: isMine
+                                      ? CrossAxisAlignment.end
+                                      : CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      m.message ?? '',
+                                      style: const TextStyle(fontSize: 15),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (m.isPending) ...[
+                                          const SizedBox(
+                                            width: 10,
+                                            height: 10,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 1.8,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 6),
+                                        ],
+                                        Text(
+                                          _formatTime(m.createdAt),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            color: GlmColors.textMuted,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
                               ),
-                            );
-                          },
-                        ),
-                ),
-                Padding(
-                  padding: const EdgeInsets.fromLTRB(14, 8, 14, 12),
-                  child: Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _textController,
-                          minLines: 1,
-                          maxLines: 4,
-                          textInputAction: TextInputAction.send,
-                          onSubmitted: (_) => _sendMessage(),
-                          decoration: InputDecoration(
-                            hintText: 'Digite sua mensagem...',
-                            filled: true,
-                            fillColor: Colors.orange.shade50,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
                             ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(18),
-                              borderSide: BorderSide.none,
-                            ),
-                          ),
-                        ),
+                          );
+                        },
                       ),
-                      const SizedBox(width: 10),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: Colors.orange.shade400,
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: IconButton(
-                          onPressed: _sending ? null : _sendMessage,
-                          icon: _sending
-                              ? const SizedBox(
-                                  width: 18,
-                                  height: 18,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.send, color: Colors.white),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                Container(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  decoration: BoxDecoration(
-                    color: Colors.orange.shade300,
-                    borderRadius: const BorderRadius.only(
-                      bottomLeft: Radius.circular(22),
-                      bottomRight: Radius.circular(22),
+                    ),
+            ),
+            const SizedBox(height: 14),
+            Row(
+              children: [
+                Expanded(
+                  child: TextField(
+                    controller: _textController,
+                    minLines: 1,
+                    maxLines: 4,
+                    textInputAction: TextInputAction.send,
+                    onSubmitted: (_) => _sendMessage(),
+                    decoration: const InputDecoration(
+                      hintText: 'Digite sua mensagem...',
                     ),
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/home'),
-                          child: const Icon(
-                            Icons.home_outlined,
-                            size: 32,
-                            color: Colors.black87,
-                          ),
-                        ),
+                ),
+                const SizedBox(width: 10),
+                SizedBox(
+                  width: 56,
+                  height: 56,
+                  child: ElevatedButton(
+                    onPressed: _sending ? null : _sendMessage,
+                    style: ElevatedButton.styleFrom(
+                      padding: EdgeInsets.zero,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
                       ),
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () =>
-                              Navigator.pushNamed(context, '/perfilMotorista'),
-                          child: const Icon(
-                            Icons.person_outline,
-                            size: 32,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ),
-                      MouseRegion(
-                        cursor: SystemMouseCursors.click,
-                        child: GestureDetector(
-                          onTap: () => Navigator.pushNamed(context, '/chats'),
-                          child: Container(
-                            padding: const EdgeInsets.all(10),
-                            decoration: const BoxDecoration(
-                              color: Colors.black,
-                              shape: BoxShape.circle,
-                            ),
-                            child: const Icon(
-                              Icons.chat_bubble_outline,
-                              size: 26,
+                    ),
+                    child: _sending
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
                               color: Colors.white,
                             ),
-                          ),
-                        ),
-                      ),
-                    ],
+                          )
+                        : const Icon(Icons.send_rounded),
                   ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );

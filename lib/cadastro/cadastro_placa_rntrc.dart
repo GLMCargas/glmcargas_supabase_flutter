@@ -1,14 +1,15 @@
+import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'vehicle_data.dart';
+
 import 'documentos_cnh.dart';
+import 'vehicle_data.dart';
 
 class CadastroPlacaRntrcScreen extends StatefulWidget {
-  final VehicleData vehicleData;
+  const CadastroPlacaRntrcScreen({super.key, required this.vehicleData});
 
-  const CadastroPlacaRntrcScreen({Key? key, required this.vehicleData})
-    : super(key: key);
+  final VehicleData vehicleData;
 
   @override
   State<CadastroPlacaRntrcScreen> createState() =>
@@ -37,7 +38,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro: usuário não autenticado.")),
+        const SnackBar(content: Text('Erro: usuario nao autenticado.')),
       );
       return;
     }
@@ -49,7 +50,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
         v.tipoBau == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text("Erro interno: dados do veículo incompletos."),
+          content: Text('Erro interno: dados do veiculo incompletos.'),
         ),
       );
       return;
@@ -58,17 +59,15 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final dados = {
-        "Usuario_CaminhoneiroID": user.id,
-        "TamanhoVeiculo": v.tamanhoVeiculo,
-        "TipoVeiculo": v.tipoVeiculo,
-        "BauVeiculo": v.bauVeiculo,
-        "TipoBau": v.tipoBau,
-        "PlacaVeiculo": _placaController.text.trim(),
-        "RNTRC_ANTT": _rntrcController.text.trim(),
-      };
-
-      await supabase.from("Veiculo").insert(dados);
+      await supabase.from('Veiculo').insert({
+        'Usuario_CaminhoneiroID': user.id,
+        'TamanhoVeiculo': v.tamanhoVeiculo,
+        'TipoVeiculo': v.tipoVeiculo,
+        'BauVeiculo': v.bauVeiculo,
+        'TipoBau': v.tipoBau,
+        'PlacaVeiculo': _placaController.text.trim(),
+        'RNTRC_ANTT': _rntrcController.text.trim(),
+      });
 
       if (!mounted) return;
 
@@ -76,14 +75,10 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
         context,
         MaterialPageRoute(builder: (_) => const DocumentosCnhScreen()),
       );
-    } catch (e, stack) {
-      print("❌ ERRO AO SALVAR VEÍCULO:");
-      print(e);
-      print(stack);
-
+    } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Erro ao salvar veículo: $e"),
+          content: Text('Erro ao salvar veiculo: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -92,194 +87,69 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
     }
   }
 
+  Future<void> _abrirAjudaRntrc() async {
+    const url = 'https://consultapublica.antt.gov.br/Site/ConsultaRNTRC.aspx';
+
+    final uri = Uri.parse(url);
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.orange.shade100,
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 430),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.orange.withOpacity(0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.local_shipping, color: Colors.orange),
-                    SizedBox(width: 6),
-                    Text(
-                      "GLM",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.orange,
+    return GlmFormPage(
+      title: 'Dados do veiculo',
+      subtitle: 'Digite a placa e o RNTRC para concluir o cadastro do veiculo.',
+      onBack: () => Navigator.pop(context),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            TextFormField(
+              controller: _placaController,
+              decoration: const InputDecoration(labelText: 'Placa *'),
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _rntrcController,
+              decoration: const InputDecoration(labelText: 'RNTRC (ANTT) *'),
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+            ),
+            const SizedBox(height: 18),
+            GlmInfoCard(
+              child: InkWell(
+                onTap: _abrirAjudaRntrc,
+                borderRadius: BorderRadius.circular(18),
+                child: const Row(
+                  children: [
+                    Icon(Icons.info_outline_rounded, size: 18),
+                    SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Veja como localizar o numero do RNTRC (ANTT).',
+                        style: TextStyle(
+                          color: GlmColors.textMuted,
+                          decoration: TextDecoration.underline,
+                        ),
                       ),
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      "CARGAS",
-                      style: TextStyle(color: Colors.orange, fontSize: 16),
-                    ),
-                    Spacer(),
-                    Icon(Icons.menu, color: Colors.orange, size: 28),
                   ],
                 ),
               ),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-                        const Text(
-                          'Cadastro de veículo',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Digite a placa e o RNTRC do veículo',
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 24),
-
-                        TextFormField(
-                          controller: _placaController,
-                          decoration: InputDecoration(
-                            labelText: "Placa *",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: (v) => (v == null || v.isEmpty)
-                              ? "Campo obrigatório"
-                              : null,
-                        ),
-                        const SizedBox(height: 12),
-
-                        TextFormField(
-                          controller: _rntrcController,
-                          decoration: InputDecoration(
-                            labelText: "RNTRC (ANTT) *",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(16),
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                          ),
-                          validator: (v) => (v == null || v.isEmpty)
-                              ? "Campo obrigatório"
-                              : null,
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        Container(
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: Colors.grey.shade200,
-                            borderRadius: BorderRadius.circular(16),
-                          ),
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click, 
-                            child: GestureDetector(
-                              onTap: () async {
-                                const url =
-                                    "https://consultapublica.antt.gov.br/Site/ConsultaRNTRC.aspx"; 
-
-                                if (await canLaunchUrl(Uri.parse(url))) {
-                                  await launchUrl(
-                                    Uri.parse(url),
-                                    mode: LaunchMode
-                                        .externalApplication, 
-                                  );
-                                } else {
-                                  print("Não foi possível abrir o link");
-                                }
-                              },
-                              child: Row(
-                                children: const [
-                                  Icon(Icons.info_outline, size: 18),
-                                  SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      'Veja como encontrar o seu número do RNTRC (ANTT).',
-                                      style: TextStyle(
-                                        color: Colors.blueGrey,
-                                        decoration: TextDecoration.underline,
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 32),
-
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: _isLoading ? null : _salvarVeiculo,
-                              child: _isLoading
-                                  ? const CircularProgressIndicator()
-                                  : Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        CircleAvatar(
-                                          radius: 6,
-                                          backgroundColor: Colors.orange,
-                                        ),
-                                        SizedBox(width: 4),
-                                        Icon(
-                                          Icons.play_arrow,
-                                          size: 40,
-                                          color: Colors.orange,
-                                        ),
-                                        SizedBox(width: 4),
-                                        Icon(
-                                          Icons.play_arrow,
-                                          size: 50,
-                                          color: Color(0xFFFFC89C),
-                                        ),
-                                      ],
-                                    ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            GlmPrimaryButton(
+              label: 'Enviar documentos',
+              icon: Icons.arrow_forward_rounded,
+              loading: _isLoading,
+              onPressed: _salvarVeiculo,
+            ),
+          ],
         ),
       ),
     );

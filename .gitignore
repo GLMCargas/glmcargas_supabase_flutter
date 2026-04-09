@@ -32,6 +32,8 @@ migrate_working_dir/
 .pub/
 /build/
 /coverage/
+/env/.dart-tool/
+/env/.dartServer/
 
 # Symbolication related
 app.*.symbols

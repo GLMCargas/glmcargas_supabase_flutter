@@ -1,9 +1,11 @@
+import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+
 import 'cadastro_tipo_veiculo.dart';
 
 class CadastroEnderecoScreen extends StatefulWidget {
-  const CadastroEnderecoScreen({Key? key}) : super(key: key);
+  const CadastroEnderecoScreen({super.key});
 
   @override
   State<CadastroEnderecoScreen> createState() => _CadastroEnderecoScreenState();
@@ -42,41 +44,41 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Erro: usuário não autenticado.")),
+        const SnackBar(content: Text('Erro: usuario nao autenticado.')),
       );
       return;
     }
 
     final dados = {
-      "Usuario_CaminhoneiroID": user.id,
-      "CEP": int.tryParse(_cepController.text.replaceAll(RegExp(r'\D'), '')),
-      "Rua": _ruaController.text.trim(),
-      "Bairro": _bairroController.text.trim(),
-      "Cidade": _cidadeController.text.trim(),
-      "UF": _ufController.text.trim().toUpperCase(),
-      "Numero": _semNumero
+      'Usuario_CaminhoneiroID': user.id,
+      'CEP': int.tryParse(_cepController.text.replaceAll(RegExp(r'\D'), '')),
+      'Rua': _ruaController.text.trim(),
+      'Bairro': _bairroController.text.trim(),
+      'Cidade': _cidadeController.text.trim(),
+      'UF': _ufController.text.trim().toUpperCase(),
+      'Numero': _semNumero
           ? 0
           : int.tryParse(
               _numeroController.text.replaceAll(RegExp(r'[^0-9]'), ''),
             ),
-      "Complemento": _complementoController.text.trim().isEmpty
+      'Complemento': _complementoController.text.trim().isEmpty
           ? null
           : _complementoController.text.trim(),
     };
 
     try {
-      await supabase.from("Endereço").insert(dados);
+      await supabase.from('Endere\u00E7o').insert(dados);
 
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(builder: (_) => const CadastroTipoVeiculoScreen()),
-        );
-      }
+      if (!mounted) return;
+
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (_) => const CadastroTipoVeiculoScreen()),
+      );
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text("Erro ao salvar: $e"),
+          content: Text('Erro ao salvar: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -85,174 +87,78 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.orange.shade100, 
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 430),
-          decoration: BoxDecoration(
-            color: Colors.white, 
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.orange.withOpacity(0.4), 
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-
-          child: Column(
-            children: [
-              Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.local_shipping, color: Colors.orange),
-                    SizedBox(width: 6),
-                    Text(
-                      "GLM",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.orange,
-                      ),
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      "CARGAS",
-                      style: TextStyle(color: Colors.orange, fontSize: 16),
-                    ),
-                    Spacer(),
-                    Icon(Icons.menu, color: Colors.orange, size: 28),
-                  ],
-                ),
-              ),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      children: [
-                        const SizedBox(height: 16),
-
-                        const Text(
-                          "Endereço",
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        const Text(
-                          'Complete com os dados do seu endereço',
-                          textAlign: TextAlign.center,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        _campo("CEP", _cepController),
-                        _campo("Rua", _ruaController),
-                        _campo("Bairro", _bairroController),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _campo("Cidade", _cidadeController),
-                            ),
-                            const SizedBox(width: 8),
-                            SizedBox(
-                              width: 70,
-                              child: _campo("UF", _ufController),
-                            ),
-                          ],
-                        ),
-
-                        Row(
-                          children: [
-                            Expanded(
-                              child: _campo(
-                                "Número",
-                                _numeroController,
-                                validatorOverride: (v) {
-                                  if (_semNumero) return null;
-                                  return (v == null || v.isEmpty)
-                                      ? "Obrigatório"
-                                      : null;
-                                },
-                              ),
-                            ),
-
-                            Column(
-                              children: [
-                                Checkbox(
-                                  value: _semNumero,
-                                  onChanged: (v) =>
-                                      setState(() => _semNumero = v ?? false),
-                                ),
-                                const Text(
-                                  "Sem número",
-                                  style: TextStyle(fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-
-                        _campo(
-                          "Complemento (opcional)",
-                          _complementoController,
-                          validatorOverride: (_) => null,
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: MouseRegion(
-                            cursor: SystemMouseCursors.click,
-                            child: GestureDetector(
-                              onTap: _salvarEndereco,
-                              child: Row(
-                                mainAxisSize: MainAxisSize.min,
-                                children: const [
-                                  CircleAvatar(
-                                    radius: 6,
-                                    backgroundColor: Colors.orange,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Icon(
-                                    Icons.play_arrow,
-                                    size: 40,
-                                    color: Colors.orange,
-                                  ),
-                                  SizedBox(width: 4),
-                                  Icon(
-                                    Icons.play_arrow,
-                                    size: 50,
-                                    color: Color(0xFFFFC89C),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
+    return GlmFormPage(
+      title: 'Endereco',
+      subtitle: 'Complete com os dados do seu endereco.',
+      onBack: () => Navigator.pop(context),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _campo('CEP', _cepController),
+            const SizedBox(height: 16),
+            _campo('Rua', _ruaController),
+            const SizedBox(height: 16),
+            _campo('Bairro', _bairroController),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Expanded(child: _campo('Cidade', _cidadeController)),
+                const SizedBox(width: 10),
+                SizedBox(width: 92, child: _campo('UF', _ufController)),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _campo(
+                    'Numero',
+                    _numeroController,
+                    validatorOverride: (v) {
+                      if (_semNumero) return null;
+                      return (v == null || v.isEmpty)
+                          ? 'Campo obrigatorio'
+                          : null;
+                    },
                   ),
                 ),
-              ),
-            ],
-          ),
+                const SizedBox(width: 10),
+                GlmInfoCard(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 10,
+                    vertical: 10,
+                  ),
+                  child: Column(
+                    children: [
+                      Checkbox(
+                        value: _semNumero,
+                        onChanged: (v) {
+                          setState(() => _semNumero = v ?? false);
+                        },
+                      ),
+                      const Text('Sem numero', style: TextStyle(fontSize: 12)),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            _campo(
+              'Complemento',
+              _complementoController,
+              validatorOverride: (_) => null,
+              requiredField: false,
+            ),
+            const SizedBox(height: 24),
+            GlmPrimaryButton(
+              label: 'Continuar',
+              icon: Icons.arrow_forward_rounded,
+              onPressed: _salvarEndereco,
+            ),
+          ],
         ),
       ),
     );
@@ -262,18 +168,15 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
     String label,
     TextEditingController controller, {
     String? Function(String?)? validatorOverride,
+    bool requiredField = true,
   }) {
-    return Padding(
-      padding: const EdgeInsets.only(bottom: 14),
-      child: TextFormField(
-        controller: controller,
-        validator:
-            validatorOverride ??
-            (v) => (v == null || v.isEmpty) ? "Campo obrigatório" : null,
-        decoration: InputDecoration(
-          labelText: "$label *",
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-        ),
+    return TextFormField(
+      controller: controller,
+      validator:
+          validatorOverride ??
+          (v) => (v == null || v.isEmpty) ? 'Campo obrigatorio' : null,
+      decoration: InputDecoration(
+        labelText: requiredField ? '$label *' : label,
       ),
     );
   }

@@ -1,5 +1,7 @@
 import 'dart:io';
+
 import 'package:app/cadastro/cadastro_endereco.dart';
+import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -26,20 +28,20 @@ class _SignupPageState extends State<SignupPage> {
   final _telefoneController = TextEditingController();
 
   final cpfMask = MaskTextInputFormatter(
-    mask: "###.###.###-##",
-    filter: {"#": RegExp(r'[0-9]')},
+    mask: '###.###.###-##',
+    filter: {'#': RegExp(r'[0-9]')},
   );
   final cnpjMask = MaskTextInputFormatter(
-    mask: "##.###.###/####-##",
-    filter: {"#": RegExp(r'[0-9]')},
+    mask: '##.###.###/####-##',
+    filter: {'#': RegExp(r'[0-9]')},
   );
   final telefoneMask = MaskTextInputFormatter(
-    mask: "(##) #####-####",
-    filter: {"#": RegExp(r'[0-9]')},
+    mask: '(##) #####-####',
+    filter: {'#': RegExp(r'[0-9]')},
   );
   final dataMask = MaskTextInputFormatter(
-    mask: "##/##/####",
-    filter: {"#": RegExp(r'[0-9]')},
+    mask: '##/##/####',
+    filter: {'#': RegExp(r'[0-9]')},
   );
 
   bool usandoCnpj = false;
@@ -51,15 +53,6 @@ class _SignupPageState extends State<SignupPage> {
   String? _generoSelecionado;
 
   final ImagePicker _picker = ImagePicker();
-
-  void _proximo() {
-    if (_formKey.currentState!.validate()) {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
-      );
-    }
-  }
 
   Future<void> _selecionarFoto() async {
     final pickedFile = await _picker.pickImage(
@@ -90,401 +83,271 @@ class _SignupPageState extends State<SignupPage> {
       return null;
     }
 
-    final filePath = "fotos_motoristas/$userId.jpg";
-
-    Uint8List fileBytes;
-    if (kIsWeb) {
-      fileBytes = _fotoSelecionadaWeb!;
-    } else {
-      fileBytes = await _fotoSelecionada!.readAsBytes();
-    }
+    final filePath = 'fotos_motoristas/$userId.jpg';
+    final fileBytes = kIsWeb
+        ? _fotoSelecionadaWeb!
+        : await _fotoSelecionada!.readAsBytes();
 
     await supabase.storage
-        .from("fotos_motoristas")
+        .from('fotos_motoristas')
         .uploadBinary(
           filePath,
           fileBytes,
           fileOptions: const FileOptions(
-            contentType: "image/jpeg",
+            contentType: 'image/jpeg',
             upsert: true,
           ),
         );
 
-    final fotoUrl = supabase.storage
-        .from("fotos_motoristas")
-        .getPublicUrl(filePath);
-
-    return fotoUrl;
+    return supabase.storage.from('fotos_motoristas').getPublicUrl(filePath);
   }
 
- Future<void> _signUp() async {
-  print("▶️ Iniciando cadastro...");
+  Future<void> _signUp() async {
+    if (!_formKey.currentState!.validate()) return;
 
-  if (!_formKey.currentState!.validate()) return;
-
-  if (_generoSelecionado == null) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Selecione um gênero.")),
-    );
-    return;
-  }
-
-  setState(() => _isLoading = true);
-
-  try {
-    final supabase = Supabase.instance.client;
-
-    final partes = _nascimentoController.text.split("/");
-    final dataFormatada = "${partes[2]}-${partes[1]}-${partes[0]}";
-
-    final signUpResponse = await supabase.auth.signUp(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
-
-    final user = signUpResponse.user;
-
-    if (user == null) {
-      throw "Erro ao criar usuário no AUTH.";
+    if (_generoSelecionado == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Selecione um genero.')));
+      return;
     }
 
-    final userId = user.id;
+    setState(() => _isLoading = true);
 
-    await supabase.auth.signInWithPassword(
-      email: _emailController.text.trim(),
-      password: _passwordController.text.trim(),
-    );
+    try {
+      final supabase = Supabase.instance.client;
+      final partes = _nascimentoController.text.split('/');
+      final dataFormatada = '${partes[2]}-${partes[1]}-${partes[0]}';
 
-    final fotoUrl = await _uploadFoto(userId);
+      final signUpResponse = await supabase.auth.signUp(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
 
-    final dados = {
-      "id": userId,
-      "email": _emailController.text.trim(),
-      "nome": _nomeController.text.trim(),
-      "sobrenome": _sobrenomeController.text.trim(),
-      "cpf_cnpj": _cpfController.text.trim(),
-      "data_nascimento": dataFormatada,
-      "telefone": _telefoneController.text.trim(),
-      "genero": _generoSelecionado,
-      "foto_url": fotoUrl,
-    };
+      final user = signUpResponse.user;
+      if (user == null) {
+        throw 'Erro ao criar usuario no AUTH.';
+      }
 
-    await supabase.from("Usuario_Caminhoneiro").insert(dados);
+      final userId = user.id;
 
-    if (mounted) {
+      await supabase.auth.signInWithPassword(
+        email: _emailController.text.trim(),
+        password: _passwordController.text.trim(),
+      );
+
+      final fotoUrl = await _uploadFoto(userId);
+
+      await supabase.from('Usuario_Caminhoneiro').insert({
+        'id': userId,
+        'email': _emailController.text.trim(),
+        'nome': _nomeController.text.trim(),
+        'sobrenome': _sobrenomeController.text.trim(),
+        'cpf_cnpj': _cpfController.text.trim(),
+        'data_nascimento': dataFormatada,
+        'telefone': _telefoneController.text.trim(),
+        'genero': _generoSelecionado,
+        'foto_url': fotoUrl,
+      });
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Cadastro realizado com sucesso!")),
+        const SnackBar(content: Text('Cadastro realizado com sucesso!')),
       );
 
       Navigator.push(
         context,
         MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
       );
-    }
-  } catch (e, stack) {
-    print("ERRO NO CADASTRO:");
-    print(e);
-    print(stack);
+    } catch (e) {
+      if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text("Erro ao cadastrar: $e"),
-        backgroundColor: Colors.red,
-      ),
-    );
-  } finally {
-    setState(() => _isLoading = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Erro ao cadastrar: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isLoading = false);
+      }
+    }
   }
-}
+
+  ImageProvider<Object>? _fotoPerfil() {
+    if (kIsWeb && _fotoSelecionadaWeb != null) {
+      return MemoryImage(_fotoSelecionadaWeb!);
+    }
+
+    if (!kIsWeb && _fotoSelecionada != null) {
+      return FileImage(_fotoSelecionada!);
+    }
+
+    return null;
+  }
+
+  @override
+  void dispose() {
+    _emailController.dispose();
+    _passwordController.dispose();
+    _nomeController.dispose();
+    _sobrenomeController.dispose();
+    _cpfController.dispose();
+    _nascimentoController.dispose();
+    _telefoneController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.orange.shade100,
-      body: Center(
-        child: Container(
-          constraints: const BoxConstraints(maxWidth: 430),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.orange.withOpacity(0.4),
-                blurRadius: 12,
-                offset: const Offset(0, 4),
-              ),
-            ],
-          ),
-          child: Column(
-            children: [
-              Container(
-                height: 64,
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                ),
-                child: Row(
-                  children: const [
-                    Icon(Icons.local_shipping, color: Colors.orange),
-                    SizedBox(width: 6),
-                    Text(
-                      "GLM",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 18,
-                        color: Colors.orange,
+    return GlmFormPage(
+      title: 'Criar conta',
+      subtitle: 'Complete os dados para iniciar seu cadastro de motorista.',
+      onBack: () => Navigator.pop(context),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Center(
+              child: Column(
+                children: [
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      onTap: _selecionarFoto,
+                      child: CircleAvatar(
+                        radius: 55,
+                        backgroundColor: GlmColors.accentSoft,
+                        backgroundImage: _fotoPerfil(),
+                        child:
+                            (_fotoSelecionada == null &&
+                                _fotoSelecionadaWeb == null)
+                            ? const Icon(
+                                Icons.add_a_photo_outlined,
+                                size: 30,
+                                color: GlmColors.accentStrong,
+                              )
+                            : null,
                       ),
                     ),
-                    SizedBox(width: 4),
-                    Text(
-                      "CARGAS",
-                      style: TextStyle(color: Colors.orange, fontSize: 16),
+                  ),
+                  const SizedBox(height: 10),
+                  TextButton(
+                    onPressed: _selecionarFoto,
+                    child: const Text('Adicionar foto'),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            _buildCampo(
+              'Email',
+              _emailController,
+              type: TextInputType.emailAddress,
+            ),
+            const SizedBox(height: 16),
+            _buildCampo('Nome', _nomeController),
+            const SizedBox(height: 16),
+            _buildCampo('Sobrenome', _sobrenomeController),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _cpfController,
+              keyboardType: TextInputType.number,
+              inputFormatters: usandoCnpj ? [cnpjMask] : [cpfMask],
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+              decoration: const InputDecoration(labelText: 'CPF/CNPJ *'),
+              onChanged: (v) {
+                final numbers = v.replaceAll(RegExp(r'\D'), '');
+                if (numbers.length > 11 && !usandoCnpj) {
+                  setState(() => usandoCnpj = true);
+                  _cpfController.clear();
+                } else if (numbers.length <= 11 && usandoCnpj) {
+                  setState(() => usandoCnpj = false);
+                  _cpfController.clear();
+                }
+              },
+            ),
+            const SizedBox(height: 16),
+            _buildCampo(
+              'Data de nascimento',
+              _nascimentoController,
+              mask: dataMask,
+              type: TextInputType.datetime,
+            ),
+            const SizedBox(height: 16),
+            _buildCampo(
+              'Telefone',
+              _telefoneController,
+              mask: telefoneMask,
+              type: TextInputType.phone,
+            ),
+            const SizedBox(height: 16),
+            TextFormField(
+              controller: _passwordController,
+              obscureText: _obscurePassword,
+              validator: (v) =>
+                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+              decoration: InputDecoration(
+                labelText: 'Senha *',
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePassword
+                        ? Icons.visibility_off_rounded
+                        : Icons.visibility_rounded,
+                  ),
+                  onPressed: () {
+                    setState(() => _obscurePassword = !_obscurePassword);
+                  },
+                ),
+              ),
+            ),
+            const SizedBox(height: 24),
+            const Text(
+              'Com qual genero voce se identifica?',
+              style: TextStyle(
+                fontWeight: FontWeight.w700,
+                fontSize: 16,
+                color: GlmColors.textPrimary,
+              ),
+            ),
+            const SizedBox(height: 8),
+            GlmInfoCard(
+              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 8),
+              child: RadioGroup<String>(
+                groupValue: _generoSelecionado,
+                onChanged: (value) {
+                  setState(() => _generoSelecionado = value);
+                },
+                child: const Column(
+                  children: [
+                    RadioListTile<String>(
+                      title: Text('Feminino'),
+                      value: 'Feminino',
                     ),
-                    Spacer(),
-                    Icon(Icons.menu, color: Colors.orange, size: 28),
+                    RadioListTile<String>(
+                      title: Text('Masculino'),
+                      value: 'Masculino',
+                    ),
+                    RadioListTile<String>(
+                      title: Text('Prefiro nao informar'),
+                      value: 'Nao Informar',
+                    ),
                   ],
                 ),
               ),
-
-              Expanded(
-                child: SingleChildScrollView(
-                  padding: const EdgeInsets.all(24),
-                  child: Form(
-                    key: _formKey,
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 10),
-
-                        const Center(
-                          child: Text(
-                            "Olá, Motorista!",
-                            style: TextStyle(
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 4),
-
-                        const Center(
-                          child: Text(
-                            "Criar conta",
-                            style: TextStyle(
-                              fontSize: 20,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.orange,
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        const Center(
-                          child: Text(
-                            "Complete os dados para criar sua conta",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(fontSize: 15),
-                          ),
-                        ),
-
-                        const SizedBox(height: 20),
-
-                        Center(
-                          child: Column(
-                            children: [
-                              MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: GestureDetector(
-                                  onTap: _selecionarFoto,
-                                  child: CircleAvatar(
-                                    radius: 55,
-                                    backgroundImage: kIsWeb
-                                        ? (_fotoSelecionadaWeb != null
-                                              ? MemoryImage(
-                                                  _fotoSelecionadaWeb!,
-                                                )
-                                              : null)
-                                        : (_fotoSelecionada != null
-                                              ? FileImage(_fotoSelecionada!)
-                                              : null),
-                                    child:
-                                        (_fotoSelecionada == null &&
-                                            _fotoSelecionadaWeb == null)
-                                        ? const Icon(
-                                            Icons.add_a_photo,
-                                            size: 30,
-                                          )
-                                        : null,
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 10),
-                              MouseRegion(
-                                cursor: SystemMouseCursors.click,
-                                child: GestureDetector(
-                                  onTap: _selecionarFoto,
-                                  child: Text(
-                                    "Adicionar foto",
-                                    style: TextStyle(
-                                      color: Colors.orange,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        _buildCampo(
-                          "Email",
-                          _emailController,
-                          type: TextInputType.emailAddress,
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildCampo("Nome", _nomeController),
-                        const SizedBox(height: 16),
-
-                        _buildCampo("Sobrenome", _sobrenomeController),
-                        const SizedBox(height: 16),
-
-                        TextFormField(
-                          controller: _cpfController,
-                          keyboardType: TextInputType.number,
-                          inputFormatters: usandoCnpj ? [cnpjMask] : [cpfMask],
-                          validator: (v) => v == null || v.isEmpty
-                              ? "Campo obrigatório"
-                              : null,
-                          decoration: InputDecoration(
-                            labelText: "CPF/CNPJ *",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                          ),
-                          onChanged: (v) {
-                            final numbers = v.replaceAll(RegExp(r'\D'), '');
-                            if (numbers.length > 11 && !usandoCnpj) {
-                              setState(() => usandoCnpj = true);
-                              _cpfController.clear();
-                            } else if (numbers.length <= 11 && usandoCnpj) {
-                              setState(() => usandoCnpj = false);
-                              _cpfController.clear();
-                            }
-                          },
-                        ),
-
-                        const SizedBox(height: 16),
-
-                        _buildCampo(
-                          "Data de Nascimento",
-                          _nascimentoController,
-                          mask: dataMask,
-                          type: TextInputType.datetime,
-                        ),
-                        const SizedBox(height: 16),
-
-                        _buildCampo(
-                          "Telefone",
-                          _telefoneController,
-                          mask: telefoneMask,
-                          type: TextInputType.phone,
-                        ),
-                        const SizedBox(height: 16),
-
-                        TextFormField(
-                          controller: _passwordController,
-                          obscureText: _obscurePassword,
-                          validator: (v) => v == null || v.isEmpty
-                              ? "Campo obrigatório"
-                              : null,
-                          decoration: InputDecoration(
-                            labelText: "Senha *",
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            suffixIcon: IconButton(
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off
-                                    : Icons.visibility,
-                              ),
-                              onPressed: () => setState(
-                                () => _obscurePassword = !_obscurePassword,
-                              ),
-                            ),
-                          ),
-                        ),
-
-                        const SizedBox(height: 24),
-
-                        const Text(
-                          "Com qual gênero você se identifica?",
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 16,
-                          ),
-                        ),
-
-                        RadioListTile(
-                          title: const Text("Feminino"),
-                          value: "Feminino",
-                          groupValue: _generoSelecionado,
-                          onChanged: (v) =>
-                              setState(() => _generoSelecionado = v),
-                        ),
-
-                        RadioListTile(
-                          title: const Text("Masculino"),
-                          value: "Masculino",
-                          groupValue: _generoSelecionado,
-                          onChanged: (v) =>
-                              setState(() => _generoSelecionado = v),
-                        ),
-
-                        RadioListTile(
-                          title: const Text("Prefiro não informar"),
-                          value: "Não Informar",
-                          groupValue: _generoSelecionado,
-                          onChanged: (v) =>
-                              setState(() => _generoSelecionado = v),
-                        ),
-
-                        const SizedBox(height: 30),
-
-                        SizedBox(
-                          width: double.infinity,
-                          height: 50,
-                          child: ElevatedButton(
-                            onPressed: _isLoading ? null : _signUp,
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.orange,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                            ),
-                            child: _isLoading
-                                ? const CircularProgressIndicator(
-                                    color: Colors.white,
-                                  )
-                                : const Text(
-                                    "Cadastrar",
-                                    style: TextStyle(fontSize: 18),
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 24),
+            GlmPrimaryButton(
+              label: 'Continuar cadastro',
+              icon: Icons.arrow_forward_rounded,
+              loading: _isLoading,
+              onPressed: _signUp,
+            ),
+          ],
         ),
       ),
     );
@@ -500,11 +363,8 @@ class _SignupPageState extends State<SignupPage> {
       controller: controller,
       keyboardType: type,
       inputFormatters: mask != null ? [mask] : null,
-      validator: (v) => v == null || v.isEmpty ? "Campo obrigatório" : null,
-      decoration: InputDecoration(
-        labelText: "$label *",
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
-      ),
+      validator: (v) => v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+      decoration: InputDecoration(labelText: '$label *'),
     );
   }
 }

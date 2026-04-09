@@ -1,10 +1,11 @@
+import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class MenuLateral extends StatelessWidget {
-  final VoidCallback onClose;
-
   const MenuLateral({super.key, required this.onClose});
+
+  final VoidCallback onClose;
 
   @override
   Widget build(BuildContext context) {
@@ -13,25 +14,25 @@ class MenuLateral extends StatelessWidget {
 
     return Container(
       width: 260,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.only(
+      decoration: BoxDecoration(
+        color: GlmColors.panel,
+        borderRadius: const BorderRadius.only(
           topRight: Radius.circular(20),
           bottomRight: Radius.circular(20),
         ),
-        boxShadow: [
+        boxShadow: const [
           BoxShadow(
             blurRadius: 12,
             color: Colors.black26,
             offset: Offset(3, 0),
-          )
+          ),
         ],
       ),
       child: FutureBuilder(
         future: supabase
-            .from("Usuario_Caminhoneiro")
+            .from('Usuario_Caminhoneiro')
             .select()
-            .eq("id", user!.id)
+            .eq('id', user!.id)
             .single(),
         builder: (context, snapshot) {
           final dados = snapshot.data ?? {};
@@ -39,11 +40,10 @@ class MenuLateral extends StatelessWidget {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // TOPO
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: const BoxDecoration(
-                  color: Colors.orange,
+                  color: GlmColors.accent,
                   borderRadius: BorderRadius.only(
                     topRight: Radius.circular(20),
                   ),
@@ -52,57 +52,56 @@ class MenuLateral extends StatelessWidget {
                   children: [
                     CircleAvatar(
                       backgroundColor: Colors.white,
-                      backgroundImage: dados["foto_url"] != null
-                          ? NetworkImage(dados["foto_url"])
+                      backgroundImage: dados['foto_url'] != null
+                          ? NetworkImage(dados['foto_url'])
                           : null,
-                      child: dados["foto_url"] == null
-                          ? const Icon(Icons.person, color: Colors.orange)
+                      child: dados['foto_url'] == null
+                          ? const Icon(Icons.person, color: GlmColors.accent)
                           : null,
                     ),
                     const SizedBox(width: 12),
                     Expanded(
                       child: Text(
-                        dados["nome"] ?? "Motorista",
+                        dados['nome'] ?? 'Motorista',
                         style: const TextStyle(
                           color: Colors.white,
                           fontWeight: FontWeight.bold,
+                          fontSize: 16,
                         ),
                       ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.close, color: Colors.white),
                       onPressed: onClose,
-                    )
+                    ),
                   ],
                 ),
               ),
-
               const SizedBox(height: 12),
-
-              // ITENS MENU
               _itemMenu(
                 icon: Icons.home_outlined,
-                label: "Página Inicial",
+                label: 'Pagina Inicial',
                 onTap: () {
-                  Navigator.pushReplacementNamed(context, "/home");
+                  Navigator.pushNamed(context, '/home');
                 },
               ),
-
               _itemMenu(
                 icon: Icons.person_outline,
-                label: "Meu Perfil",
+                label: 'Meu Perfil',
                 onTap: () {
-                  Navigator.pushReplacementNamed(context, "/perfilMotorista");
+                  Navigator.pushNamed(context, '/perfilMotorista');
                 },
               ),
-
               _itemMenu(
                 icon: Icons.logout,
-                label: "Sair",
+                label: 'Sair',
                 onTap: () async {
                   await supabase.auth.signOut();
                   Navigator.pushNamedAndRemoveUntil(
-                      context, "/login", (r) => false);
+                    context,
+                    '/login',
+                    (r) => false,
+                  );
                 },
               ),
             ],
@@ -125,7 +124,14 @@ class MenuLateral extends StatelessWidget {
           children: [
             Icon(icon, size: 24, color: Colors.black87),
             const SizedBox(width: 12),
-            Text(label, style: const TextStyle(fontSize: 16)),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 16,
+                color: GlmColors.textPrimary,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
           ],
         ),
       ),

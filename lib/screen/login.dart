@@ -17,6 +17,18 @@ class _LoginPageState extends State<LoginPage> {
 
   bool _isLoading = false;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+
+      if (_supabase.auth.currentUser != null) {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      }
+    });
+  }
+
   Future<void> _login() async {
     if (_isLoading) return;
 
@@ -45,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home');
+      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
     } on AuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
@@ -104,8 +116,11 @@ class _LoginPageState extends State<LoginPage> {
             body: Stack(
               fit: StackFit.expand,
               children: [
-                Image.asset('assets/images/fundocaminhao.jpg', fit: BoxFit.cover),
-                Container(color: Colors.black.withOpacity(0.3)),
+                Image.asset(
+                  'assets/images/fundocaminhao.jpg',
+                  fit: BoxFit.cover,
+                ),
+                Container(color: const Color.fromRGBO(0, 0, 0, 0.3)),
                 Center(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.all(20),
@@ -113,11 +128,11 @@ class _LoginPageState extends State<LoginPage> {
                       width: 400,
                       padding: const EdgeInsets.all(24),
                       decoration: BoxDecoration(
-                        color: Colors.white.withOpacity(0.15),
+                        color: const Color.fromRGBO(255, 255, 255, 0.15),
                         borderRadius: BorderRadius.circular(20),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.3),
+                            color: const Color.fromRGBO(0, 0, 0, 0.3),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           ),
@@ -163,7 +178,9 @@ class _LoginPageState extends State<LoginPage> {
                             textInputAction: TextInputAction.next,
                             keyboardType: TextInputType.emailAddress,
                             onSubmitted: (_) {
-                              FocusScope.of(context).requestFocus(_passwordFocusNode);
+                              FocusScope.of(
+                                context,
+                              ).requestFocus(_passwordFocusNode);
                             },
                             decoration: InputDecoration(
                               labelText: 'Email',
@@ -172,16 +189,28 @@ class _LoginPageState extends State<LoginPage> {
                                 color: Colors.white70,
                               ),
                               filled: true,
-                              fillColor: Colors.white.withOpacity(0.1),
+                              fillColor: const Color.fromRGBO(
+                                255,
+                                255,
+                                255,
+                                0.1,
+                              ),
                               labelStyle: const TextStyle(color: Colors.white),
                               enabledBorder: OutlineInputBorder(
                                 borderSide: BorderSide(
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: const Color.fromRGBO(
+                                    255,
+                                    255,
+                                    255,
+                                    0.6,
+                                  ),
                                 ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(color: Colors.orange),
+                                borderSide: const BorderSide(
+                                  color: Colors.orange,
+                                ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
@@ -202,16 +231,28 @@ class _LoginPageState extends State<LoginPage> {
                                 color: Colors.white70,
                               ),
                               filled: true,
-                              fillColor: Colors.white.withOpacity(0.1),
+                              fillColor: const Color.fromRGBO(
+                                255,
+                                255,
+                                255,
+                                0.1,
+                              ),
                               labelStyle: const TextStyle(color: Colors.white),
                               enabledBorder: OutlineInputBorder(
                                 borderSide: BorderSide(
-                                  color: Colors.white.withOpacity(0.6),
+                                  color: const Color.fromRGBO(
+                                    255,
+                                    255,
+                                    255,
+                                    0.6,
+                                  ),
                                 ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderSide: const BorderSide(color: Colors.orange),
+                                borderSide: const BorderSide(
+                                  color: Colors.orange,
+                                ),
                                 borderRadius: BorderRadius.circular(10),
                               ),
                             ),
@@ -225,7 +266,9 @@ class _LoginPageState extends State<LoginPage> {
                               onPressed: _isLoading ? null : _login,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: Colors.orange.shade600,
-                                padding: const EdgeInsets.symmetric(vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 14,
+                                ),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
@@ -254,7 +297,10 @@ class _LoginPageState extends State<LoginPage> {
 
                           TextButton(
                             onPressed: () {
-                              Navigator.pushNamed(context, '/cadastroMotorista');
+                              Navigator.pushNamed(
+                                context,
+                                '/cadastroMotorista',
+                              );
                             },
                             child: const Text.rich(
                               TextSpan(
@@ -277,7 +323,10 @@ class _LoginPageState extends State<LoginPage> {
                           const Text(
                             "Ao acessar a conta você concorda com nossos termos de uso.",
                             textAlign: TextAlign.center,
-                            style: TextStyle(color: Colors.white60, fontSize: 12),
+                            style: TextStyle(
+                              color: Colors.white60,
+                              fontSize: 12,
+                            ),
                           ),
                         ],
                       ),

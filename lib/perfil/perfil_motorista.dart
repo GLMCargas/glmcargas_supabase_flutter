@@ -1,9 +1,10 @@
+import 'package:app/widgets/glm_ui.dart';
 import 'package:app/widgets/menu_lateral.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PerfilMotoristaScreen extends StatefulWidget {
-  const PerfilMotoristaScreen({Key? key}) : super(key: key);
+  const PerfilMotoristaScreen({super.key});
 
   @override
   State<PerfilMotoristaScreen> createState() => _PerfilMotoristaScreenState();
@@ -13,7 +14,6 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
   Map<String, dynamic>? usuario;
   Map<String, dynamic>? veiculo;
   bool carregando = true;
-
   bool _menuAberto = false;
 
   @override
@@ -30,7 +30,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
 
     var user = supabase.auth.currentUser;
 
-    int tentativas = 0;
+    var tentativas = 0;
     while (user == null && tentativas < 10) {
       await Future.delayed(const Duration(milliseconds: 150));
       user = supabase.auth.currentUser;
@@ -49,15 +49,15 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
 
     try {
       final dadosUsuario = await supabase
-          .from("Usuario_Caminhoneiro")
+          .from('Usuario_Caminhoneiro')
           .select()
-          .eq("id", user.id)
+          .eq('id', user.id)
           .maybeSingle();
 
       final dadosVeiculo = await supabase
-          .from("Veiculo")
+          .from('Veiculo')
           .select()
-          .eq("Usuario_CaminhoneiroID", user.id)
+          .eq('Usuario_CaminhoneiroID', user.id)
           .maybeSingle();
 
       if (!mounted) return;
@@ -67,308 +67,200 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
         carregando = false;
       });
     } catch (e) {
-      print("Erro ao carregar perfil: $e");
+      debugPrint('Erro ao carregar perfil: $e');
       if (!mounted) return;
       setState(() => carregando = false);
     }
   }
 
   String _formatarData(dynamic valor) {
-    if (valor == null) return "-";
-    final partes = valor.toString().split("-");
+    if (valor == null) return '-';
+    final partes = valor.toString().split('-');
     if (partes.length != 3) return valor.toString();
-    return "${partes[2]}/${partes[1]}/${partes[0]}";
+    return '${partes[2]}/${partes[1]}/${partes[0]}';
   }
 
-  Widget _footerIcon({
-    required IconData icon,
-    required VoidCallback onTap,
-    bool ativo = false,
-  }) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onTap,
-        child: ativo
-            ? Container(
-                padding: const EdgeInsets.all(10),
-                decoration: const BoxDecoration(
-                  color: Colors.black,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  icon,
-                  size: 26,
-                  color: Colors.white,
-                ),
-              )
-            : Icon(
-                icon,
-                size: 32,
-                color: Colors.black87,
-              ),
-      ),
-    );
+  Color _statusColor(String? status) {
+    switch (status) {
+      case 'Aprovado':
+        return const Color(0xFFD7F4DB);
+      case 'Reprovado':
+        return const Color(0xFFFFD8D3);
+      default:
+        return const Color(0xFFFFE8C9);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.orange.shade100,
-      body: Center(
-        child: Stack(
-          children: [
-            Container(
-              width: 430,
-              height: MediaQuery.of(context).size.height * 0.95,
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(20),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.orange.withOpacity(0.4),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ],
+    return GlmShell(
+      header: GlmHeader(
+        onBack: () => Navigator.maybePop(context),
+        onMenu: () => setState(() => _menuAberto = true),
+      ),
+      bottomNavigation: const GlmBottomNavigation(
+        current: GlmBottomNavItem.profile,
+      ),
+      overlays: [
+        AnimatedPositioned(
+          duration: const Duration(milliseconds: 250),
+          left: _menuAberto ? 0 : -260,
+          top: 0,
+          bottom: 0,
+          child: MenuLateral(
+            onClose: () => setState(() => _menuAberto = false),
+          ),
+        ),
+      ],
+      body: carregando
+          ? const Center(child: CircularProgressIndicator())
+          : usuario == null
+          ? const Center(
+              child: Padding(
+                padding: EdgeInsets.all(24),
+                child: Text(
+                  'Nao foi possivel carregar os dados do perfil.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: GlmColors.textMuted),
+                ),
               ),
+            )
+          : SingleChildScrollView(
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 20),
               child: Column(
                 children: [
+                  const GlmSectionHeader(
+                    title: 'Meu perfil',
+                    subtitle:
+                        'Veja seus dados pessoais e o veiculo cadastrado.',
+                  ),
+                  const SizedBox(height: 24),
+                  CircleAvatar(
+                    radius: 56,
+                    backgroundColor: GlmColors.accentSoft,
+                    backgroundImage: usuario!['foto_url'] != null
+                        ? NetworkImage(usuario!['foto_url'])
+                        : null,
+                    child: usuario!['foto_url'] == null
+                        ? const Icon(
+                            Icons.person_rounded,
+                            size: 52,
+                            color: GlmColors.accentStrong,
+                          )
+                        : null,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    '${usuario!['nome'] ?? ''} ${usuario!['sobrenome'] ?? ''}'
+                        .trim(),
+                    textAlign: TextAlign.center,
+                    style: const TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.w800,
+                      color: GlmColors.textPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
                   Container(
-                    height: 64,
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: Row(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: _statusColor(usuario!['status']?.toString()),
+                      borderRadius: BorderRadius.circular(999),
+                    ),
+                    child: Text(
+                      'Status: ${usuario!['status'] ?? 'Pendente'}',
+                      style: const TextStyle(
+                        color: GlmColors.textPrimary,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 22),
+                  GlmInfoCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        IconButton(
-                          icon: const Icon(
-                            Icons.arrow_back_ios,
-                            color: Colors.orange,
-                          ),
-                          onPressed: () => Navigator.pop(context),
-                        ),
-                        const Icon(Icons.local_shipping, color: Colors.orange),
-                        const SizedBox(width: 6),
                         const Text(
-                          "GLM",
+                          'Dados pessoais',
                           style: TextStyle(
-                            fontWeight: FontWeight.bold,
                             fontSize: 18,
-                            color: Colors.orange,
+                            fontWeight: FontWeight.w800,
+                            color: GlmColors.textPrimary,
                           ),
                         ),
-                        const SizedBox(width: 4),
-                        const Text(
-                          "CARGAS",
-                          style: TextStyle(color: Colors.orange, fontSize: 18),
+                        const SizedBox(height: 14),
+                        _linhaInfo('Email', usuario!['email']),
+                        _linhaInfo('Telefone', usuario!['telefone']),
+                        _linhaInfo(
+                          'Nascimento',
+                          _formatarData(usuario!['data_nascimento']),
                         ),
-                        const Spacer(),
-                        MouseRegion(
-                          cursor: SystemMouseCursors.click,
-                          child: IconButton(
-                            icon: const Icon(
-                              Icons.menu,
-                              color: Colors.orange,
-                              size: 28,
-                            ),
-                            onPressed: () {
-                              setState(() => _menuAberto = true);
-                            },
-                          ),
-                        ),
+                        _linhaInfo('Genero', usuario!['genero']),
                       ],
                     ),
                   ),
-
-                  Expanded(
-                    child: carregando
-                        ? const Center(
-                            child: CircularProgressIndicator(
-                              color: Colors.orange,
-                            ),
-                          )
-                        : usuario == null
-                            ? const Center(
-                                child: Padding(
-                                  padding: EdgeInsets.all(24),
-                                  child: Text(
-                                    "Não foi possível carregar os dados do perfil.",
-                                    textAlign: TextAlign.center,
-                                    style: TextStyle(fontSize: 16),
-                                  ),
-                                ),
-                              )
-                            : SingleChildScrollView(
-                                padding: const EdgeInsets.fromLTRB(24, 24, 24, 12),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.center,
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 55,
-                                      backgroundImage: usuario!["foto_url"] != null
-                                          ? NetworkImage(usuario!["foto_url"])
-                                          : null,
-                                      child: usuario!["foto_url"] == null
-                                          ? const Icon(Icons.person, size: 50)
-                                          : null,
-                                    ),
-                                    const SizedBox(height: 16),
-                                    Text(
-                                      "${usuario!['nome'] ?? ""} ${usuario!['sobrenome'] ?? ""}"
-                                          .trim(),
-                                      textAlign: TextAlign.center,
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 12,
-                                        vertical: 6,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: usuario!['status'] == "Aprovado"
-                                            ? Colors.green.shade100
-                                            : usuario!['status'] == "Reprovado"
-                                                ? Colors.red.shade100
-                                                : Colors.orange.shade100,
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        "Status: ${usuario!['status'] ?? "Pendente"}",
-                                        style: const TextStyle(fontSize: 16),
-                                      ),
-                                    ),
-                                    const SizedBox(height: 20),
-                                    _secaoTitulo("Dados pessoais"),
-                                    _linhaInfo("Email", usuario!["email"]),
-                                    _linhaInfo(
-                                      "Telefone",
-                                      usuario!["telefone"],
-                                    ),
-                                    _linhaInfo(
-                                      "Nascimento",
-                                      _formatarData(usuario!["data_nascimento"]),
-                                    ),
-                                    _linhaInfo("Gênero", usuario!["genero"]),
-                                    const SizedBox(height: 25),
-                                    _secaoTitulo("Veículo cadastrado"),
-                                    veiculo == null
-                                        ? const Padding(
-                                            padding: EdgeInsets.symmetric(vertical: 8),
-                                            child: Text(
-                                              "Nenhum veículo cadastrado ainda.",
-                                            ),
-                                          )
-                                        : Column(
-                                            children: [
-                                              _linhaInfo(
-                                                "Tipo do veículo",
-                                                veiculo!["TipoVeiculo"],
-                                              ),
-                                              _linhaInfo(
-                                                "Carroceria",
-                                                veiculo!["TipoBau"],
-                                              ),
-                                              _linhaInfo(
-                                                "Placa",
-                                                veiculo!["PlacaVeiculo"],
-                                              ),
-                                              _linhaInfo(
-                                                "RNTRC",
-                                                veiculo!["RNTRC_ANTT"],
-                                              ),
-                                            ],
-                                          ),
-                                    const SizedBox(height: 16),
-                                  ],
-                                ),
-                              ),
-                  ),
-
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    decoration: BoxDecoration(
-                      color: Colors.orange.shade300,
-                      borderRadius: const BorderRadius.only(
-                        bottomLeft: Radius.circular(20),
-                        bottomRight: Radius.circular(20),
-                      ),
-                    ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  const SizedBox(height: 16),
+                  GlmInfoCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        _footerIcon(
-                          icon: Icons.home_outlined,
-                          onTap: () =>
-                              Navigator.pushReplacementNamed(context, '/home'),
-                        ),
-                        _footerIcon(
-                          icon: Icons.person_outline,
-                          ativo: true,
-                          onTap: () => Navigator.pushReplacementNamed(
-                            context,
-                            '/perfilMotorista',
+                        const Text(
+                          'Veiculo cadastrado',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                            color: GlmColors.textPrimary,
                           ),
                         ),
-                        _footerIcon(
-                          icon: Icons.chat_bubble_outline,
-                          onTap: () =>
-                              Navigator.pushReplacementNamed(context, '/chats'),
-                        ),
+                        const SizedBox(height: 14),
+                        if (veiculo == null)
+                          const Text(
+                            'Nenhum veiculo cadastrado ainda.',
+                            style: TextStyle(color: GlmColors.textMuted),
+                          )
+                        else ...[
+                          _linhaInfo(
+                            'Tipo do veiculo',
+                            veiculo!['TipoVeiculo'],
+                          ),
+                          _linhaInfo('Carroceria', veiculo!['TipoBau']),
+                          _linhaInfo('Placa', veiculo!['PlacaVeiculo']),
+                          _linhaInfo('RNTRC', veiculo!['RNTRC_ANTT']),
+                        ],
                       ],
                     ),
                   ),
                 ],
               ),
             ),
-
-            AnimatedPositioned(
-              duration: const Duration(milliseconds: 250),
-              left: _menuAberto ? 0 : -260,
-              top: 0,
-              bottom: 0,
-              child: MenuLateral(
-                onClose: () {
-                  setState(() => _menuAberto = false);
-                },
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _secaoTitulo(String titulo) {
-    return Column(
-      children: [
-        const SizedBox(height: 10),
-        Text(
-          titulo,
-          style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-        ),
-        const Divider(thickness: 1),
-        const SizedBox(height: 10),
-      ],
     );
   }
 
   Widget _linhaInfo(String label, dynamic valor) {
-    return Container(
-      width: double.infinity,
-      padding: const EdgeInsets.symmetric(vertical: 8),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            "$label:",
-            style: const TextStyle(fontWeight: FontWeight.bold),
+          SizedBox(
+            width: 110,
+            child: Text(
+              label,
+              style: const TextStyle(
+                fontWeight: FontWeight.w700,
+                color: GlmColors.textPrimary,
+              ),
+            ),
           ),
           const SizedBox(width: 8),
           Expanded(
-            child: Text(valor?.toString() ?? "-"),
+            child: Text(
+              valor?.toString() ?? '-',
+              style: const TextStyle(color: GlmColors.textMuted),
+            ),
           ),
         ],
       ),
