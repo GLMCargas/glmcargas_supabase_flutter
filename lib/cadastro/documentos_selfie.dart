@@ -60,7 +60,7 @@ class _DocumentosSelfieScreenState extends State<DocumentosSelfieScreen> {
 
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro: usuario nao autenticado.')),
+          const SnackBar(content: Text('Erro: usuário não autenticado.')),
         );
         return;
       }
@@ -146,7 +146,7 @@ class _DocumentosSelfieScreenState extends State<DocumentosSelfieScreen> {
   @override
   Widget build(BuildContext context) {
     return GlmFormPage(
-      title: 'Validacao facial',
+      title: 'Validação facial',
       subtitle: 'Tire uma selfie clara para validar sua identidade.',
       onBack: () => Navigator.pop(context),
       child: Column(
@@ -166,7 +166,7 @@ class _DocumentosSelfieScreenState extends State<DocumentosSelfieScreen> {
                 ),
                 SizedBox(height: 10),
                 Text('- Esteja em local iluminado'),
-                Text('- Retire oculos, bone e mascara'),
+                Text('- Retire óculos, boné e máscara'),
                 Text('- Centralize o rosto na imagem'),
               ],
             ),
@@ -174,7 +174,7 @@ class _DocumentosSelfieScreenState extends State<DocumentosSelfieScreen> {
           const SizedBox(height: 14),
           const GlmInfoCard(
             child: Text(
-              'Se estiver no computador, o envio por arquivo pode ser a opcao mais estavel.',
+              'Se estiver no computador, o envio por arquivo pode ser a opção mais estável.',
               style: TextStyle(
                 color: Colors.redAccent,
                 fontWeight: FontWeight.w700,

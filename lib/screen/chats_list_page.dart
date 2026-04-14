@@ -62,7 +62,6 @@ class _ChatsListPageState extends State<ChatsListPage> {
           children: [
             const GlmSectionHeader(
               title: 'Meus chats',
-              subtitle: 'Acompanhe aqui as conversas abertas com as empresas.',
             ),
             const SizedBox(height: 20),
             Expanded(
@@ -71,7 +70,7 @@ class _ChatsListPageState extends State<ChatsListPage> {
                   : rooms.isEmpty
                   ? const Center(
                       child: Text(
-                        'Voce ainda nao tem conversas.',
+                        'Você ainda nao tem conversas.',
                         style: TextStyle(color: GlmColors.textMuted),
                       ),
                     )

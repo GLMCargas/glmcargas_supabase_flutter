@@ -108,7 +108,7 @@ class _SignupPageState extends State<SignupPage> {
     if (_generoSelecionado == null) {
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text('Selecione um genero.')));
+      ).showSnackBar(const SnackBar(content: Text('Selecione um gênero.')));
       return;
     }
 
@@ -126,7 +126,7 @@ class _SignupPageState extends State<SignupPage> {
 
       final user = signUpResponse.user;
       if (user == null) {
-        throw 'Erro ao criar usuario no AUTH.';
+        throw 'Erro ao criar usuário no AUTH.';
       }
 
       final userId = user.id;
@@ -258,7 +258,7 @@ class _SignupPageState extends State<SignupPage> {
               keyboardType: TextInputType.number,
               inputFormatters: usandoCnpj ? [cnpjMask] : [cpfMask],
               validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
               decoration: const InputDecoration(labelText: 'CPF/CNPJ *'),
               onChanged: (v) {
                 final numbers = v.replaceAll(RegExp(r'\D'), '');
@@ -290,7 +290,7 @@ class _SignupPageState extends State<SignupPage> {
               controller: _passwordController,
               obscureText: _obscurePassword,
               validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
               decoration: InputDecoration(
                 labelText: 'Senha *',
                 suffixIcon: IconButton(
@@ -307,7 +307,7 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 24),
             const Text(
-              'Com qual genero voce se identifica?',
+              'Com qual gênero você se identifica?',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 16,
@@ -333,8 +333,8 @@ class _SignupPageState extends State<SignupPage> {
                       value: 'Masculino',
                     ),
                     RadioListTile<String>(
-                      title: Text('Prefiro nao informar'),
-                      value: 'Nao Informar',
+                      title: Text('Prefiro não informar'),
+                      value: 'Não Informar',
                     ),
                   ],
                 ),

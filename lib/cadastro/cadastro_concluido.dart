@@ -12,7 +12,7 @@ class CadastroConcluidoScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return GlmFormPage(
       title: 'Cadastro completo',
-      subtitle: 'Seus dados foram enviados para analise.',
+      subtitle: 'Seus dados foram enviados para análise.',
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -26,7 +26,7 @@ class CadastroConcluidoScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 20),
                 Text(
-                  'Estamos avaliando suas informacoes.',
+                  'Estamos avaliando suas informações.',
                   textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 18,
@@ -36,7 +36,7 @@ class CadastroConcluidoScreen extends StatelessWidget {
                 ),
                 SizedBox(height: 10),
                 Text(
-                  'Agora e so aguardar o e-mail de confirmacao da sua conta.',
+                  'Agora é só aguardar o e-mail de confirmação da sua conta.',
                   textAlign: TextAlign.center,
                   style: TextStyle(color: GlmColors.textMuted, height: 1.4),
                 ),

@@ -38,7 +38,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro: usuario nao autenticado.')),
+        const SnackBar(content: Text('Erro: usuário não autenticado.')),
       );
       return;
     }
@@ -50,7 +50,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
         v.tipoBau == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erro interno: dados do veiculo incompletos.'),
+          content: Text('Erro interno: dados do veículo incompletos.'),
         ),
       );
       return;
@@ -78,7 +78,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar veiculo: $e'),
+          content: Text('Erro ao salvar veículo: $e'),
           backgroundColor: Colors.red,
         ),
       );
@@ -99,8 +99,8 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
   @override
   Widget build(BuildContext context) {
     return GlmFormPage(
-      title: 'Dados do veiculo',
-      subtitle: 'Digite a placa e o RNTRC para concluir o cadastro do veiculo.',
+      title: 'Dados do veículo',
+      subtitle: 'Digite a placa e o RNTRC para concluir o cadastro do veículo.',
       onBack: () => Navigator.pop(context),
       child: Form(
         key: _formKey,
@@ -111,14 +111,14 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
               controller: _placaController,
               decoration: const InputDecoration(labelText: 'Placa *'),
               validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _rntrcController,
               decoration: const InputDecoration(labelText: 'RNTRC (ANTT) *'),
               validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
             ),
             const SizedBox(height: 18),
             GlmInfoCard(
@@ -131,7 +131,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Veja como localizar o numero do RNTRC (ANTT).',
+                        'Veja como localizar o número do RNTRC (ANTT).',
                         style: TextStyle(
                           color: GlmColors.textMuted,
                           decoration: TextDecoration.underline,

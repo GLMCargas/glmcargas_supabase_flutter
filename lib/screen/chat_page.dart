@@ -19,6 +19,7 @@ class _ChatPageState extends State<ChatPage> {
   bool _loading = true;
   bool _sending = false;
   String? _roomId;
+  String _companyName = 'Empresa';
 
   final List<_ChatMessage> _messages = [];
 
@@ -44,6 +45,13 @@ class _ChatPageState extends State<ChatPage> {
 
     if (args is Map && args['roomId'] != null) {
       _roomId = args['roomId'].toString();
+      final companyName =
+          args['companyName']?.toString() ?? args['empresa']?.toString();
+
+      if (companyName != null && companyName.trim().isNotEmpty) {
+        _companyName = companyName.trim();
+      }
+
       _init();
     } else {
       setState(() => _loading = false);
@@ -60,6 +68,7 @@ class _ChatPageState extends State<ChatPage> {
     }
 
     try {
+      await _loadCompanyName();
       await _loadHistory();
       _subscribeRealtime();
     } catch (e) {
@@ -71,6 +80,23 @@ class _ChatPageState extends State<ChatPage> {
       if (mounted) setState(() => _loading = false);
       _scrollToBottom();
     }
+  }
+
+  Future<void> _loadCompanyName() async {
+    if (_roomId == null || _companyName != 'Empresa') return;
+
+    final data = await _supabase
+        .from('chat_rooms')
+        .select('Viagens:viagem_id(empresa)')
+        .eq('id', _roomId!)
+        .maybeSingle();
+
+    final viagem = (data?['Viagens'] as Map?) ?? {};
+    final companyName = viagem['empresa']?.toString().trim();
+
+    if (!mounted || companyName == null || companyName.isEmpty) return;
+
+    setState(() => _companyName = companyName);
   }
 
   Future<void> _loadHistory() async {
@@ -234,9 +260,18 @@ class _ChatPageState extends State<ChatPage> {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 12),
         child: Column(
           children: [
-            const GlmSectionHeader(
-              title: 'Chat com a empresa',
-              subtitle: 'Converse em tempo real sobre a carga selecionada.',
+            Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                _companyName,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(
+                  color: GlmColors.textPrimary,
+                  fontSize: 24,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
             ),
             const SizedBox(height: 18),
             Expanded(

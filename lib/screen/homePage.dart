@@ -17,8 +17,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   Set<dynamic> cardsAbertos = {};
   bool _menuAberto = false;
 
-  String? ufMotorista;
-  String? ufSelecionada;
+  String ufSelecionada = 'Todas';
 
   final List<String> ufs = const [
     'Todas',
@@ -54,50 +53,18 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   @override
   void initState() {
     super.initState();
-    _inicializarHome();
-  }
-
-  Future<void> _inicializarHome() async {
-    await _carregarUfMotorista();
-    await _carregarViagens();
-  }
-
-  Future<void> _carregarUfMotorista() async {
-    try {
-      final user = supabase.auth.currentUser;
-
-      if (user == null) {
-        setState(() => ufSelecionada = 'Todas');
-        return;
-      }
-
-      final endereco = await supabase
-          .from('Endere\u00E7o')
-          .select('UF')
-          .eq('Usuario_CaminhoneiroID', user.id)
-          .maybeSingle();
-
-      final uf = endereco?['UF']?.toString().trim().toUpperCase();
-
-      setState(() {
-        ufMotorista = uf;
-        ufSelecionada = (uf != null && uf.isNotEmpty) ? uf : 'Todas';
-      });
-    } catch (e) {
-      debugPrint('Erro ao carregar UF do motorista: $e');
-      setState(() => ufSelecionada = 'Todas');
-    }
+    _carregarViagens();
   }
 
   Future<void> _carregarViagens() async {
     try {
       dynamic response;
 
-      if (ufSelecionada != null && ufSelecionada != 'Todas') {
+      if (ufSelecionada != 'Todas') {
         response = await supabase
             .from('Viagens')
             .select()
-            .eq('origem_uf', ufSelecionada!);
+            .eq('origem_uf', ufSelecionada);
       } else {
         response = await supabase.from('Viagens').select();
       }
@@ -186,18 +153,17 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
         child: Column(
           children: [
             const GlmSectionHeader(
-              title: 'Cargas disponiveis',
-              subtitle: 'Filtre pelas UFs e abra os detalhes da carga.',
+              title: 'Cargas Disponíveis',
             ),
             const SizedBox(height: 20),
             GlmInfoCard(
               child: DropdownButtonFormField<String>(
-                initialValue: ufSelecionada ?? 'Todas',
-                decoration: const InputDecoration(labelText: 'Filtrar por UF'),
+                initialValue: ufSelecionada,
+                decoration: const InputDecoration(labelText: 'Estados'),
                 items: ufs.map((uf) {
                   return DropdownMenuItem<String>(
                     value: uf,
-                    child: Text(uf == 'Todas' ? 'Todas as UFs' : uf),
+                    child: Text(uf == 'Todas' ? 'Todos os estados' : uf),
                   );
                 }).toList(),
                 onChanged: (value) async {
@@ -214,7 +180,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
               child: viagens.isEmpty
                   ? const Center(
                       child: Text(
-                        'Nenhuma carga disponivel.',
+                        'Nenhuma carga disponível.',
                         style: TextStyle(color: GlmColors.textMuted),
                       ),
                     )

@@ -119,7 +119,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'Nao foi possivel carregar os dados do perfil.',
+                  'Não foi possível carregar os dados do perfil.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16, color: GlmColors.textMuted),
                 ),
@@ -132,7 +132,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                   const GlmSectionHeader(
                     title: 'Meu perfil',
                     subtitle:
-                        'Veja seus dados pessoais e o veiculo cadastrado.',
+                        'Veja seus dados pessoais e o veículo cadastrado.',
                   ),
                   const SizedBox(height: 24),
                   CircleAvatar(
@@ -198,7 +198,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                           'Nascimento',
                           _formatarData(usuario!['data_nascimento']),
                         ),
-                        _linhaInfo('Genero', usuario!['genero']),
+                        _linhaInfo('Gênero', usuario!['genero']),
                       ],
                     ),
                   ),
@@ -208,7 +208,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Veiculo cadastrado',
+                          'Veículo cadastrado',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -218,12 +218,12 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                         const SizedBox(height: 14),
                         if (veiculo == null)
                           const Text(
-                            'Nenhum veiculo cadastrado ainda.',
+                            'Nenhum veículo cadastrado ainda.',
                             style: TextStyle(color: GlmColors.textMuted),
                           )
                         else ...[
                           _linhaInfo(
-                            'Tipo do veiculo',
+                            'Tipo do veículo',
                             veiculo!['TipoVeiculo'],
                           ),
                           _linhaInfo('Carroceria', veiculo!['TipoBau']),

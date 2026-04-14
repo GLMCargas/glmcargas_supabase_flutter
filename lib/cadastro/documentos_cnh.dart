@@ -53,7 +53,7 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
 
       if (user == null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Erro: usuario nao autenticado.')),
+          const SnackBar(content: Text('Erro: usuário não autenticado.')),
         );
         return;
       }
@@ -140,7 +140,7 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
   Widget build(BuildContext context) {
     return GlmFormPage(
       title: 'Documentos',
-      subtitle: 'Envie uma foto nitida da CNH para validacao.',
+      subtitle: 'Envie uma foto nítida da CNH para validação.',
       onBack: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -158,8 +158,8 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
                   ),
                 ),
                 SizedBox(height: 10),
-                Text('- Documento fora do plastico e aberto'),
-                Text('- Todos os campos legiveis'),
+                Text('- Documento fora do plástico e aberto'),
+                Text('- Todos os campos legíveis'),
               ],
             ),
           ),

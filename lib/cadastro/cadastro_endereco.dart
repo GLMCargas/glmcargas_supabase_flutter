@@ -88,8 +88,8 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
   @override
   Widget build(BuildContext context) {
     return GlmFormPage(
-      title: 'Endereco',
-      subtitle: 'Complete com os dados do seu endereco.',
+      title: 'Endereço',
+      subtitle: 'Complete com os dados do seu endereço.',
       onBack: () => Navigator.pop(context),
       child: Form(
         key: _formKey,
@@ -115,7 +115,7 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
               children: [
                 Expanded(
                   child: _campo(
-                    'Numero',
+                    'Número',
                     _numeroController,
                     validatorOverride: (v) {
                       if (_semNumero) return null;
@@ -139,7 +139,7 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
                           setState(() => _semNumero = v ?? false);
                         },
                       ),
-                      const Text('Sem numero', style: TextStyle(fontSize: 12)),
+                      const Text('S/N', style: TextStyle(fontSize: 12)),
                     ],
                   ),
                 ),

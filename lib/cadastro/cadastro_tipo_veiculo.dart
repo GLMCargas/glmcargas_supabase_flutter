@@ -21,13 +21,13 @@ class _CadastroTipoVeiculoScreenState extends State<CadastroTipoVeiculoScreen> {
       'Carreta',
       'Carreta LS',
       'Rodotrem',
-      'VanderlÃ©ia',
+      'Vanderléia',
     };
     const medios = {'Bitruck', 'Truck'};
     const leves = {'3/4', 'Fiorino', 'Toco', 'VLC'};
 
     if (pesados.contains(tipo)) return 'Pesado';
-    if (medios.contains(tipo)) return 'Medio';
+    if (medios.contains(tipo)) return 'Médio';
     if (leves.contains(tipo)) return 'Leve';
     return 'Desconhecido';
   }
@@ -35,7 +35,7 @@ class _CadastroTipoVeiculoScreenState extends State<CadastroTipoVeiculoScreen> {
   void _proximo() {
     if (_tipoSelecionado == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Selecione um tipo de veiculo.')),
+        const SnackBar(content: Text('Selecione um tipo de veículo.')),
       );
       return;
     }
@@ -56,8 +56,8 @@ class _CadastroTipoVeiculoScreenState extends State<CadastroTipoVeiculoScreen> {
   @override
   Widget build(BuildContext context) {
     return GlmFormPage(
-      title: 'Cadastro de veiculo',
-      subtitle: 'Selecione o tipo do veiculo para continuar o cadastro.',
+      title: 'Cadastro de veículo',
+      subtitle: 'Selecione o tipo do veículo para continuar o cadastro.',
       onBack: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -75,10 +75,10 @@ class _CadastroTipoVeiculoScreenState extends State<CadastroTipoVeiculoScreen> {
                   'Carreta',
                   'Carreta LS',
                   'Rodotrem',
-                  'VanderlÃ©ia',
+                  'Vanderléia',
                 ]),
                 const SizedBox(height: 16),
-                _group('Medios', const ['Bitruck', 'Truck']),
+                _group('Médios', const ['Bitruck', 'Truck']),
                 const SizedBox(height: 16),
                 _group('Leves', const ['3/4', 'Fiorino', 'Toco', 'VLC']),
               ],

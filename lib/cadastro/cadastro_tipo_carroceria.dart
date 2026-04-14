@@ -19,9 +19,9 @@ class _CadastroTipoCarroceriaScreenState
   String? _carroceriaSelecionada;
 
   String _determinarCategoriaBau(String tipoBau) {
-    const fechadas = {'BaÃº', 'BaÃº FrigorÃ­fico', 'BaÃº Refrigerado', 'Sider'};
+    const fechadas = {'Baú', 'Baú Frigorífico', 'Baú Refrigerado', 'Sider'};
     const abertas = {
-      'CaÃ§amba',
+      'Caçamba',
       'Grade Baixa',
       'Graneleiro',
       'Plataforma',
@@ -72,7 +72,7 @@ class _CadastroTipoCarroceriaScreenState
   Widget build(BuildContext context) {
     return GlmFormPage(
       title: 'Tipo de carroceria',
-      subtitle: 'Escolha o modelo de carroceria utilizado no veiculo.',
+      subtitle: 'Escolha o modelo de carroceria utilizado no veículo.',
       onBack: () => Navigator.pop(context),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -86,14 +86,14 @@ class _CadastroTipoCarroceriaScreenState
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
                 _group('Fechadas', const [
-                  'BaÃº',
-                  'BaÃº FrigorÃ­fico',
-                  'BaÃº Refrigerado',
+                  'Baú',
+                  'Baú Frigorífico',
+                  'Baú Refrigerado',
                   'Sider',
                 ]),
                 const SizedBox(height: 16),
                 _group('Abertas', const [
-                  'CaÃ§amba',
+                  'Caçamba',
                   'Grade Baixa',
                   'Graneleiro',
                   'Plataforma',
