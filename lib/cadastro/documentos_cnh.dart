@@ -150,7 +150,7 @@ class _DocumentosCnhScreenState extends State<DocumentosCnhScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Instrucoes',
+                  'Instruções',
                   style: TextStyle(
                     fontWeight: FontWeight.w800,
                     fontSize: 18,
