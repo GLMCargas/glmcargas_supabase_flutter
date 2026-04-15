@@ -24,7 +24,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (_supabase.auth.currentUser != null) {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, '/entry', (route) => false);
       }
     });
   }
@@ -57,7 +57,7 @@ class _LoginPageState extends State<LoginPage> {
       }
 
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/entry', (route) => false);
     } on AuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

@@ -265,7 +265,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                   const Divider(color: Color(0xFFF3DEC7)),
                                   const SizedBox(height: 8),
                                   _detalhe(
-                                    'Dimensoes',
+                                    'Dimensões',
                                     '${v['dimensoes'] ?? '-'}',
                                   ),
                                   _detalhe('Peso', '${v['peso'] ?? '-'} kg'),

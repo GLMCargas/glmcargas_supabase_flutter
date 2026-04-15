@@ -148,6 +148,7 @@ class _SignupPageState extends State<SignupPage> {
         'telefone': _telefoneController.text.trim(),
         'genero': _generoSelecionado,
         'foto_url': fotoUrl,
+        'status': 'Pendente',
       });
 
       if (!mounted) return;
