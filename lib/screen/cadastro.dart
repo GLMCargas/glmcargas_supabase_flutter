@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:app/cadastro/cadastro_endereco.dart';
+import 'package:app/services/app_error_messages.dart';
 import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -54,6 +55,8 @@ class _SignupPageState extends State<SignupPage> {
 
   final ImagePicker _picker = ImagePicker();
 
+  static const _duplicatePrefix = '__duplicate__';
+
   Future<void> _selecionarFoto() async {
     final pickedFile = await _picker.pickImage(
       source: ImageSource.gallery,
@@ -102,6 +105,45 @@ class _SignupPageState extends State<SignupPage> {
     return supabase.storage.from('fotos_motoristas').getPublicUrl(filePath);
   }
 
+  Future<String?> _validarDuplicidadesCadastro() async {
+    final supabase = Supabase.instance.client;
+    final email = _emailController.text.trim();
+    final cpfCnpj = _cpfController.text.trim();
+    final telefone = _telefoneController.text.trim();
+
+    final emailExistente = await supabase
+        .from('Usuario_Caminhoneiro')
+        .select('id')
+        .eq('email', email)
+        .maybeSingle();
+
+    if (emailExistente != null) {
+      return 'Ja existe uma conta cadastrada com este e-mail.';
+    }
+
+    final cpfExistente = await supabase
+        .from('Usuario_Caminhoneiro')
+        .select('id')
+        .eq('cpf_cnpj', cpfCnpj)
+        .maybeSingle();
+
+    if (cpfExistente != null) {
+      return 'Ja existe uma conta cadastrada com este CPF/CNPJ.';
+    }
+
+    final telefoneExistente = await supabase
+        .from('Usuario_Caminhoneiro')
+        .select('id')
+        .eq('telefone', telefone)
+        .maybeSingle();
+
+    if (telefoneExistente != null) {
+      return 'Ja existe uma conta cadastrada com este telefone.';
+    }
+
+    return null;
+  }
+
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -116,6 +158,12 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       final supabase = Supabase.instance.client;
+      final erroDuplicidade = await _validarDuplicidadesCadastro();
+
+      if (erroDuplicidade != null) {
+        throw StateError('$_duplicatePrefix$erroDuplicidade');
+      }
+
       final partes = _nascimentoController.text.split('/');
       final dataFormatada = '${partes[2]}-${partes[1]}-${partes[0]}';
 
@@ -161,12 +209,25 @@ class _SignupPageState extends State<SignupPage> {
         context,
         MaterialPageRoute(builder: (_) => const CadastroEnderecoScreen()),
       );
+    } on StateError catch (e) {
+      if (!mounted) return;
+
+      final message = e.toString().replaceFirst(
+        'Bad state: $_duplicatePrefix',
+        '',
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: Colors.red,
+        ),
+      );
     } catch (e) {
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao cadastrar: $e'),
+          content: Text(AppErrorMessages.signup(e)),
           backgroundColor: Colors.red,
         ),
       );
