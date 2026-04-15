@@ -106,9 +106,15 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     } catch (e) {
       if (!mounted) return;
 
+      final message = e.toString().contains('Viagem sem empresa vinculada')
+          ? 'Esta viagem ainda nao esta vinculada a uma empresa para o chat.'
+          : e.toString().contains('Viagem nao encontrada')
+          ? 'Nao foi possivel localizar essa viagem.'
+          : 'Erro ao abrir chat. Tente novamente.';
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text('Erro ao abrir chat: $e')));
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

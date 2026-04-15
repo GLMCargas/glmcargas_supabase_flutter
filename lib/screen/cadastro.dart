@@ -11,7 +11,12 @@ import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class SignupPage extends StatefulWidget {
-  const SignupPage({super.key});
+  const SignupPage({
+    super.key,
+    this.recoveryMode = false,
+  });
+
+  final bool recoveryMode;
 
   @override
   State<SignupPage> createState() => _SignupPageState();
@@ -56,6 +61,18 @@ class _SignupPageState extends State<SignupPage> {
   final ImagePicker _picker = ImagePicker();
 
   static const _duplicatePrefix = '__duplicate__';
+
+  bool get _isRecoveryUi => widget.recoveryMode;
+
+  @override
+  void initState() {
+    super.initState();
+
+    final currentUser = Supabase.instance.client.auth.currentUser;
+    if (currentUser?.email != null) {
+      _emailController.text = currentUser!.email!;
+    }
+  }
 
   Future<void> _selecionarFoto() async {
     final pickedFile = await _picker.pickImage(
@@ -105,37 +122,55 @@ class _SignupPageState extends State<SignupPage> {
     return supabase.storage.from('fotos_motoristas').getPublicUrl(filePath);
   }
 
-  Future<String?> _validarDuplicidadesCadastro() async {
+  Future<String?> _validarDuplicidadesCadastro({String? ignoreUserId}) async {
     final supabase = Supabase.instance.client;
-    final email = _emailController.text.trim();
+    final currentUser = supabase.auth.currentUser;
+    final email = (ignoreUserId != null && currentUser?.email != null)
+        ? currentUser!.email!.trim()
+        : _emailController.text.trim();
     final cpfCnpj = _cpfController.text.trim();
     final telefone = _telefoneController.text.trim();
 
-    final emailExistente = await supabase
+    var emailQuery = supabase
         .from('Usuario_Caminhoneiro')
         .select('id')
-        .eq('email', email)
-        .maybeSingle();
+        .eq('email', email);
+
+    if (ignoreUserId != null) {
+      emailQuery = emailQuery.neq('id', ignoreUserId);
+    }
+
+    final emailExistente = await emailQuery.maybeSingle();
 
     if (emailExistente != null) {
       return 'Ja existe uma conta cadastrada com este e-mail.';
     }
 
-    final cpfExistente = await supabase
+    var cpfQuery = supabase
         .from('Usuario_Caminhoneiro')
         .select('id')
-        .eq('cpf_cnpj', cpfCnpj)
-        .maybeSingle();
+        .eq('cpf_cnpj', cpfCnpj);
+
+    if (ignoreUserId != null) {
+      cpfQuery = cpfQuery.neq('id', ignoreUserId);
+    }
+
+    final cpfExistente = await cpfQuery.maybeSingle();
 
     if (cpfExistente != null) {
       return 'Ja existe uma conta cadastrada com este CPF/CNPJ.';
     }
 
-    final telefoneExistente = await supabase
+    var telefoneQuery = supabase
         .from('Usuario_Caminhoneiro')
         .select('id')
-        .eq('telefone', telefone)
-        .maybeSingle();
+        .eq('telefone', telefone);
+
+    if (ignoreUserId != null) {
+      telefoneQuery = telefoneQuery.neq('id', ignoreUserId);
+    }
+
+    final telefoneExistente = await telefoneQuery.maybeSingle();
 
     if (telefoneExistente != null) {
       return 'Ja existe uma conta cadastrada com este telefone.';
@@ -144,13 +179,30 @@ class _SignupPageState extends State<SignupPage> {
     return null;
   }
 
+  Future<bool> _isRecoveringIncompleteProfile() async {
+    final supabase = Supabase.instance.client;
+    final currentUser = supabase.auth.currentUser;
+
+    if (currentUser == null) {
+      return false;
+    }
+
+    final existingProfile = await supabase
+        .from('Usuario_Caminhoneiro')
+        .select('id')
+        .eq('id', currentUser.id)
+        .maybeSingle();
+
+    return existingProfile == null;
+  }
+
   Future<void> _signUp() async {
     if (!_formKey.currentState!.validate()) return;
 
     if (_generoSelecionado == null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Selecione um gênero.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Selecione um genero.')),
+      );
       return;
     }
 
@@ -158,7 +210,17 @@ class _SignupPageState extends State<SignupPage> {
 
     try {
       final supabase = Supabase.instance.client;
-      final erroDuplicidade = await _validarDuplicidadesCadastro();
+      final isRecoveryFlow = await _isRecoveringIncompleteProfile();
+      final currentUser = supabase.auth.currentUser;
+      final effectiveUserId = isRecoveryFlow ? currentUser?.id : null;
+      final effectiveEmail =
+          (isRecoveryFlow && currentUser?.email != null)
+          ? currentUser!.email!.trim()
+          : _emailController.text.trim();
+
+      final erroDuplicidade = await _validarDuplicidadesCadastro(
+        ignoreUserId: effectiveUserId,
+      );
 
       if (erroDuplicidade != null) {
         throw StateError('$_duplicatePrefix$erroDuplicidade');
@@ -166,29 +228,38 @@ class _SignupPageState extends State<SignupPage> {
 
       final partes = _nascimentoController.text.split('/');
       final dataFormatada = '${partes[2]}-${partes[1]}-${partes[0]}';
+      late final String userId;
 
-      final signUpResponse = await supabase.auth.signUp(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      if (isRecoveryFlow) {
+        if (currentUser == null) {
+          throw 'Sua sessao expirou. Entre novamente para concluir o cadastro.';
+        }
 
-      final user = signUpResponse.user;
-      if (user == null) {
-        throw 'Erro ao criar usuário no AUTH.';
+        userId = currentUser.id;
+      } else {
+        final signUpResponse = await supabase.auth.signUp(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
+
+        final user = signUpResponse.user;
+        if (user == null) {
+          throw 'Erro ao criar usuario no AUTH.';
+        }
+
+        userId = user.id;
+
+        await supabase.auth.signInWithPassword(
+          email: _emailController.text.trim(),
+          password: _passwordController.text.trim(),
+        );
       }
-
-      final userId = user.id;
-
-      await supabase.auth.signInWithPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
 
       final fotoUrl = await _uploadFoto(userId);
 
       await supabase.from('Usuario_Caminhoneiro').insert({
         'id': userId,
-        'email': _emailController.text.trim(),
+        'email': effectiveEmail,
         'nome': _nomeController.text.trim(),
         'sobrenome': _sobrenomeController.text.trim(),
         'cpf_cnpj': _cpfController.text.trim(),
@@ -265,8 +336,10 @@ class _SignupPageState extends State<SignupPage> {
   @override
   Widget build(BuildContext context) {
     return GlmFormPage(
-      title: 'Criar conta',
-      subtitle: 'Complete os dados para iniciar seu cadastro de motorista.',
+      title: _isRecoveryUi ? 'Concluir cadastro' : 'Criar conta',
+      subtitle: _isRecoveryUi
+          ? 'Complete seus dados para finalizar o cadastro da conta.'
+          : 'Complete os dados para iniciar seu cadastro de motorista.',
       onBack: () => Navigator.pop(context),
       child: Form(
         key: _formKey,
@@ -297,10 +370,11 @@ class _SignupPageState extends State<SignupPage> {
                     ),
                   ),
                   const SizedBox(height: 10),
-                  TextButton(
-                    onPressed: _selecionarFoto,
-                    child: const Text('Adicionar foto'),
-                  ),
+                  if (!_isRecoveryUi)
+                    TextButton(
+                      onPressed: _selecionarFoto,
+                      child: const Text('Adicionar foto'),
+                    ),
                 ],
               ),
             ),
@@ -309,6 +383,7 @@ class _SignupPageState extends State<SignupPage> {
               'Email',
               _emailController,
               type: TextInputType.emailAddress,
+              enabled: !_isRecoveryUi,
             ),
             const SizedBox(height: 16),
             _buildCampo('Nome', _nomeController),
@@ -320,7 +395,7 @@ class _SignupPageState extends State<SignupPage> {
               keyboardType: TextInputType.number,
               inputFormatters: usandoCnpj ? [cnpjMask] : [cpfMask],
               validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
+                  v == null || v.isEmpty ? 'Campo obrigatorio' : null,
               decoration: const InputDecoration(labelText: 'CPF/CNPJ *'),
               onChanged: (v) {
                 final numbers = v.replaceAll(RegExp(r'\D'), '');
@@ -347,29 +422,32 @@ class _SignupPageState extends State<SignupPage> {
               mask: telefoneMask,
               type: TextInputType.phone,
             ),
-            const SizedBox(height: 16),
-            TextFormField(
-              controller: _passwordController,
-              obscureText: _obscurePassword,
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
-              decoration: InputDecoration(
-                labelText: 'Senha *',
-                suffixIcon: IconButton(
-                  icon: Icon(
-                    _obscurePassword
-                        ? Icons.visibility_off_rounded
-                        : Icons.visibility_rounded,
+            if (!_isRecoveryUi) ...[
+              const SizedBox(height: 16),
+              TextFormField(
+                controller: _passwordController,
+                obscureText: _obscurePassword,
+                validator: (v) =>
+                    v == null || v.isEmpty ? 'Campo obrigatorio' : null,
+                decoration: InputDecoration(
+                  labelText: 'Senha *',
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword
+                          ? Icons.visibility_off_rounded
+                          : Icons.visibility_rounded,
+                    ),
+                    onPressed: () {
+                      setState(() => _obscurePassword = !_obscurePassword);
+                    },
                   ),
-                  onPressed: () {
-                    setState(() => _obscurePassword = !_obscurePassword);
-                  },
                 ),
               ),
-            ),
-            const SizedBox(height: 24),
+              const SizedBox(height: 24),
+            ] else
+              const SizedBox(height: 24),
             const Text(
-              'Com qual gênero você se identifica?',
+              'Com qual genero voce se identifica?',
               style: TextStyle(
                 fontWeight: FontWeight.w700,
                 fontSize: 16,
@@ -395,8 +473,8 @@ class _SignupPageState extends State<SignupPage> {
                       value: 'Masculino',
                     ),
                     RadioListTile<String>(
-                      title: Text('Prefiro não informar'),
-                      value: 'Não Informar',
+                      title: Text('Prefiro nao informar'),
+                      value: 'Nao Informar',
                     ),
                   ],
                 ),
@@ -404,7 +482,9 @@ class _SignupPageState extends State<SignupPage> {
             ),
             const SizedBox(height: 24),
             GlmPrimaryButton(
-              label: 'Continuar cadastro',
+              label: _isRecoveryUi
+                  ? 'Concluir dados do cadastro'
+                  : 'Continuar cadastro',
               icon: Icons.arrow_forward_rounded,
               loading: _isLoading,
               onPressed: _signUp,
@@ -420,9 +500,11 @@ class _SignupPageState extends State<SignupPage> {
     TextEditingController controller, {
     TextInputFormatter? mask,
     TextInputType type = TextInputType.text,
+    bool enabled = true,
   }) {
     return TextFormField(
       controller: controller,
+      enabled: enabled,
       keyboardType: type,
       inputFormatters: mask != null ? [mask] : null,
       validator: (v) => v == null || v.isEmpty ? 'Campo obrigatorio' : null,

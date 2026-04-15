@@ -3,6 +3,7 @@ import 'package:app/cadastro/cadastro_endereco.dart';
 import 'package:app/cadastro/cadastro_tipo_veiculo.dart';
 import 'package:app/cadastro/documentos_cnh.dart';
 import 'package:app/cadastro/documentos_selfie.dart';
+import 'package:app/screen/cadastro.dart';
 import 'package:app/screen/account_status_page.dart';
 import 'package:app/screen/login.dart';
 import 'package:flutter/material.dart';
@@ -17,6 +18,8 @@ class AccessGate extends StatelessWidget {
 
   Widget _buildOnboarding(OnboardingStep? step) {
     switch (step) {
+      case OnboardingStep.profile:
+        return const SignupPage(recoveryMode: true);
       case OnboardingStep.address:
         return const CadastroEnderecoScreen();
       case OnboardingStep.vehicle:

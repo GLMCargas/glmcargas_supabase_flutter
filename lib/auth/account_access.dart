@@ -8,6 +8,7 @@ enum AccountAccessState {
 }
 
 enum OnboardingStep {
+  profile,
   address,
   vehicle,
   cnh,
@@ -110,7 +111,8 @@ class AccountAccessService {
 
     if (data == null) {
       return const AccountAccessResult(
-        state: AccountAccessState.unauthenticated,
+        state: AccountAccessState.onboarding,
+        onboardingStep: OnboardingStep.profile,
       );
     }
 
