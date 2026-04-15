@@ -1,3 +1,4 @@
+import 'package:app/config/supabase_config.dart';
 import 'package:app/perfil/perfil_motorista.dart';
 import 'package:app/screen/cadastro.dart';
 import 'package:app/screen/chat_page.dart';
@@ -10,11 +11,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  SupabaseConfig.validate();
 
   await Supabase.initialize(
-    url: 'https://zabeesixaloyyhrsqqne.supabase.co',
-    anonKey:
-        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InphYmVlc2l4YWxveXlocnNxcW5lIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjEwODE5NzksImV4cCI6MjA3NjY1Nzk3OX0.SkdD21HGrUrK6DCmN3t-9jtRCt5gjRWr5Ysw_JIyznM',
+    url: SupabaseConfig.url,
+    anonKey: SupabaseConfig.apiKey,
   );
 
   runApp(const MyApp());
