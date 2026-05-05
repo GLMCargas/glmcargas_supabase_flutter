@@ -97,6 +97,8 @@ class MenuLateral extends StatelessWidget {
                 label: 'Sair',
                 onTap: () async {
                   await supabase.auth.signOut();
+                  if (!context.mounted) return;
+
                   Navigator.pushNamedAndRemoveUntil(
                     context,
                     '/login',
