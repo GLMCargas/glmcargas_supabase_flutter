@@ -23,6 +23,15 @@ class _ChatPageState extends State<ChatPage> {
 
   final List<_ChatMessage> _messages = [];
 
+  int _findPendingMatchIndex(_ChatMessage incoming) {
+    return _messages.indexWhere(
+      (message) =>
+          message.isPending &&
+          message.senderUserId == incoming.senderUserId &&
+          message.message?.trim() == incoming.message?.trim(),
+    );
+  }
+
   @override
   void dispose() {
     _textController.dispose();
@@ -139,7 +148,12 @@ class _ChatPageState extends State<ChatPage> {
             if (alreadyExists || !mounted) return;
 
             setState(() {
-              _messages.add(msg);
+              final pendingIndex = _findPendingMatchIndex(msg);
+              if (pendingIndex != -1) {
+                _messages[pendingIndex] = msg;
+              } else {
+                _messages.add(msg);
+              }
             });
 
             _scrollToBottom();
@@ -188,6 +202,9 @@ class _ChatPageState extends State<ChatPage> {
       if (!mounted) return;
 
       setState(() {
+        _messages.removeWhere(
+          (message) => message.id == savedMessage.id && message.id != tempId,
+        );
         final index = _messages.indexWhere((m) => m.id == tempId);
         if (index != -1) {
           _messages[index] = savedMessage;

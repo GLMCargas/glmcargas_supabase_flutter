@@ -1,3 +1,4 @@
+import 'package:app/services/app_error_messages.dart';
 import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -78,7 +79,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar veículo: $e'),
+          content: Text(AppErrorMessages.signup(e)),
           backgroundColor: Colors.red,
         ),
       );
