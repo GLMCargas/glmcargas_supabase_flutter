@@ -119,7 +119,7 @@ declare
   v_message text;
 begin
   if v_motorista is null then
-    raise exception 'Usuário nao autenticado';
+    raise exception 'Usuário não autenticado';
   end if;
 
   select nome, sobrenome

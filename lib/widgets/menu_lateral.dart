@@ -80,7 +80,7 @@ class MenuLateral extends StatelessWidget {
               const SizedBox(height: 12),
               _itemMenu(
                 icon: Icons.home_outlined,
-                label: 'Pagina Inicial',
+                label: 'Página Inicial',
                 onTap: () {
                   Navigator.pushNamed(context, '/home');
                 },

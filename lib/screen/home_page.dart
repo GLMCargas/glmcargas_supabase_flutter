@@ -13,12 +13,14 @@ class HomeMotoristaScreen extends StatefulWidget {
 class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   final supabase = Supabase.instance.client;
 
-  List<Map<String, dynamic>> viagens = [];
+  List<Map<String, dynamic>> cargas = [];
   final Set<dynamic> cardsAbertos = {};
   final Set<int> _solicitacoesEmEnvio = {};
   final Map<int, _SolicitacaoViagemInfo> _solicitacoesPorViagem = {};
 
   bool _menuAberto = false;
+  bool carregandoCargas = true;
+  String? erroCargas;
   String ufSelecionada = 'Todas';
 
   final List<String> ufs = const [
@@ -55,35 +57,55 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   @override
   void initState() {
     super.initState();
-    _carregarViagens();
+    _carregarCargas();
   }
 
-  Future<void> _carregarViagens() async {
+  Future<void> _carregarCargas() async {
+    if (!mounted) return;
+
+    if (supabase.auth.currentUser == null) {
+      setState(() {
+        cargas = [];
+        carregandoCargas = false;
+        erroCargas = 'Faça login para visualizar as cargas disponíveis.';
+      });
+      return;
+    }
+
+    setState(() {
+      carregandoCargas = true;
+      erroCargas = null;
+    });
+
     try {
-      dynamic response;
+      final response = await supabase.rpc(
+        'listar_cargas_publicadas_motorista',
+        params: {
+          'p_uf_coleta': ufSelecionada == 'Todas' ? null : ufSelecionada,
+        },
+      );
 
-      if (ufSelecionada != 'Todas') {
-        response = await supabase
-            .from('Viagens')
-            .select()
-            .eq('origem_uf', ufSelecionada);
-      } else {
-        response = await supabase.from('Viagens').select();
-      }
-
-      final loadedTrips = List<Map<String, dynamic>>.from(response);
+      final loadedTrips = List<Map<String, dynamic>>.from(response ?? const []);
       final loadedRequests = await _carregarSolicitacoes();
 
       if (!mounted) return;
 
       setState(() {
-        viagens = loadedTrips;
+        cargas = loadedTrips;
+        carregandoCargas = false;
         _solicitacoesPorViagem
           ..clear()
           ..addAll(loadedRequests);
       });
     } catch (e) {
-      debugPrint('Erro ao carregar viagens: $e');
+      debugPrint('Erro ao carregar cargas: $e');
+      if (!mounted) return;
+
+      setState(() {
+        cargas = [];
+        carregandoCargas = false;
+        erroCargas = 'Não foi possível carregar as cargas desta região.';
+      });
     }
   }
 
@@ -115,8 +137,29 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     });
   }
 
-  Future<String?> _abrirChat(int viagemId) async {
+  int? _extractTripId(Map<String, dynamic> carga) {
+    final viagemId = carga['viagem_id'];
+    if (viagemId is num) return viagemId.toInt();
+
+    final legacyId = carga['id'];
+    if (legacyId is num) return legacyId.toInt();
+
+    return null;
+  }
+
+  Future<String?> _abrirChat(int? viagemId) async {
     try {
+      if (viagemId == null) {
+        if (!mounted) return null;
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Chat para esta carga ainda não está configurado.'),
+          ),
+        );
+        return null;
+      }
+
       final roomId = await supabase.rpc(
         'create_or_get_chat_room',
         params: {'p_viagem_id': viagemId},
@@ -149,7 +192,15 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   }
 
   Future<void> _solicitarViagem(Map<String, dynamic> viagem) async {
-    final viagemId = (viagem['id'] as num).toInt();
+    final viagemId = _extractTripId(viagem);
+    if (viagemId == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Esta carga ainda não pode receber solicitações.'),
+        ),
+      );
+      return;
+    }
     if (_solicitacoesEmEnvio.contains(viagemId)) return;
 
     setState(() => _solicitacoesEmEnvio.add(viagemId));
@@ -181,7 +232,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     } catch (e) {
       if (!mounted) return;
 
-      final message = e.toString().contains('Perfil do motorista nao encontrado')
+      final message = e.toString().contains('Perfil do motorista não encontrado')
           ? 'Não foi possível localizar seu perfil para enviar a solicitação.'
           : e.toString().contains('Viagem sem empresa vinculada')
           ? 'Esta viagem ainda não está vinculada a uma empresa.'
@@ -199,10 +250,17 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
 
   String formatarData(String iso) {
     try {
+      if (iso.trim().isEmpty) return '-';
+
       final data = DateTime.parse(iso).toLocal();
       final dia = data.day.toString().padLeft(2, '0');
       final mes = data.month.toString().padLeft(2, '0');
       final ano = data.year;
+
+      if (!iso.contains('T')) {
+        return '$dia/$mes/$ano';
+      }
+
       final hora = data.hour.toString().padLeft(2, '0');
       final minuto = data.minute.toString().padLeft(2, '0');
 
@@ -210,6 +268,35 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     } catch (_) {
       return iso;
     }
+  }
+
+  String formatarValor(dynamic valor) {
+    final texto = valor?.toString().trim();
+
+    if (texto == null || texto.isEmpty) return '-';
+    if (texto.toLowerCase().contains('combinar')) return texto;
+    if (texto.startsWith('R\$')) return texto;
+
+    return 'R\$ $texto';
+  }
+
+  String formatarPeso(dynamic peso) {
+    final texto = peso?.toString().trim();
+
+    if (texto == null || texto.isEmpty) return '-';
+    if (texto.toLowerCase().contains('kg') ||
+        texto.toLowerCase().contains('ton')) {
+      return texto;
+    }
+
+    return '$texto kg';
+  }
+
+  String inicialEmpresa(dynamic empresa) {
+    final texto = empresa?.toString().trim();
+
+    if (texto == null || texto.isEmpty) return '?';
+    return texto.substring(0, 1).toUpperCase();
   }
 
   Color _statusColor(_SolicitacaoViagemStatus status) {
@@ -277,7 +364,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
             GlmInfoCard(
               child: DropdownButtonFormField<String>(
                 initialValue: ufSelecionada,
-                decoration: const InputDecoration(labelText: 'Estados'),
+                decoration: const InputDecoration(labelText: 'UF de coleta'),
                 items: ufs.map((uf) {
                   return DropdownMenuItem<String>(
                     value: uf,
@@ -289,13 +376,43 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                     ufSelecionada = value ?? 'Todas';
                     cardsAbertos.clear();
                   });
-                  await _carregarViagens();
+                  await _carregarCargas();
                 },
               ),
             ),
             const SizedBox(height: 18),
             Expanded(
-              child: viagens.isEmpty
+              child: carregandoCargas
+                  ? const Center(
+                      child: CircularProgressIndicator(
+                        color: GlmColors.accent,
+                      ),
+                    )
+                  : erroCargas != null
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(24),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(
+                              erroCargas!,
+                              textAlign: TextAlign.center,
+                              style: const TextStyle(
+                                color: GlmColors.textMuted,
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            GlmPrimaryButton(
+                              label: 'Tentar novamente',
+                              icon: Icons.refresh_rounded,
+                              onPressed: _carregarCargas,
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : cargas.isEmpty
                   ? const Center(
                       child: Text(
                         'Nenhuma carga disponivel.',
@@ -303,18 +420,21 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                       ),
                     )
                   : RefreshIndicator(
-                      onRefresh: _carregarViagens,
+                      onRefresh: _carregarCargas,
                       child: ListView.builder(
                         padding: EdgeInsets.zero,
-                        itemCount: viagens.length,
+                        itemCount: cargas.length,
                         itemBuilder: (context, index) {
-                          final v = viagens[index];
-                          final viagemId = (v['id'] as num).toInt();
+                          final v = cargas[index];
+                          final viagemId = _extractTripId(v);
                           final aberta = cardsAbertos.contains(v['id']);
-                          final solicitacao = _solicitacoesPorViagem[viagemId];
+                          final solicitacao = viagemId != null
+                              ? _solicitacoesPorViagem[viagemId]
+                              : null;
                           final enviando = _solicitacoesEmEnvio.contains(
-                            viagemId,
+                            viagemId ?? -1,
                           );
+                          final chatDisponivel = viagemId != null;
 
                           return GestureDetector(
                             onTap: () => _toggleCard(v['id']),
@@ -338,13 +458,10 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                 children: [
                                   Row(
                                     children: [
-                                      CircleAvatar(
-                                        backgroundColor: GlmColors.accent,
-                                        child: Text(
-                                          (v['empresa'] ?? '?')
-                                              .toString()
-                                              .substring(0, 1)
-                                              .toUpperCase(),
+                                    CircleAvatar(
+                                      backgroundColor: GlmColors.accent,
+                                      child: Text(
+                                          inicialEmpresa(v['empresa']),
                                           style: const TextStyle(
                                             color: Colors.white,
                                             fontWeight: FontWeight.bold,
@@ -387,11 +504,16 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                           ],
                                         ),
                                       ),
-                                      Text(
-                                        '${v['origem_uf'] ?? '-'} -> ${v['destino_uf'] ?? '-'}',
-                                        style: const TextStyle(
-                                          color: GlmColors.accentStrong,
-                                          fontWeight: FontWeight.w700,
+                                      Flexible(
+                                        child: Text(
+                                          '${v['origem_cidade'] ?? '-'} / ${v['origem_uf'] ?? '-'} -> ${v['destino_cidade'] ?? '-'} / ${v['destino_uf'] ?? '-'}',
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
+                                          textAlign: TextAlign.end,
+                                          style: const TextStyle(
+                                            color: GlmColors.accentStrong,
+                                            fontWeight: FontWeight.w700,
+                                          ),
                                         ),
                                       ),
                                     ],
@@ -401,13 +523,16 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                     const Divider(color: Color(0xFFF3DEC7)),
                                     const SizedBox(height: 8),
                                     _detalhe(
-                                      'Dimensoes',
+                                      'Dimensões',
                                       '${v['dimensoes'] ?? '-'}',
                                     ),
-                                    _detalhe('Peso', '${v['peso'] ?? '-'} kg'),
+                                    _detalhe(
+                                      'Peso',
+                                      formatarPeso(v['peso']),
+                                    ),
                                     _detalhe(
                                       'Valor',
-                                      'R\$ ${v['valor'] ?? '-'}',
+                                      formatarValor(v['valor']),
                                     ),
                                     _detalhe(
                                       'Entrega limite',
@@ -455,7 +580,9 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                           ? 'Falar com a empresa'
                                           : 'Abrir chat da viagem',
                                       icon: Icons.chat_bubble_outline_rounded,
-                                      onPressed: () => _abrirChat(viagemId),
+                                      onPressed: chatDisponivel
+                                          ? () => _abrirChat(viagemId)
+                                          : null,
                                     ),
                                   ],
                                 ],

@@ -12,7 +12,7 @@ declare
   v_empresa uuid;
 begin
   if v_motorista is null then
-    raise exception 'Usuario nao autenticado';
+    raise exception 'Usuário não autenticado';
   end if;
 
   select empresa_user_id
@@ -21,7 +21,7 @@ begin
   where id = p_viagem_id;
 
   if not found then
-    raise exception 'Viagem nao encontrada';
+    raise exception 'Viagem não encontrada';
   end if;
 
   if v_empresa is null then
