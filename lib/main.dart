@@ -4,7 +4,7 @@ import 'package:app/perfil/perfil_motorista.dart';
 import 'package:app/screen/cadastro.dart';
 import 'package:app/screen/chat_page.dart';
 import 'package:app/screen/chats_list_page.dart';
-import 'package:app/screen/homePage.dart';
+import 'package:app/screen/home_page.dart';
 import 'package:app/screen/login.dart';
 import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';

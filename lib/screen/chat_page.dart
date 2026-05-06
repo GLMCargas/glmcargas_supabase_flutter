@@ -258,7 +258,9 @@ class _ChatPageState extends State<ChatPage> {
       header: GlmHeader(
         onBack: () async {
           final popped = await Navigator.maybePop(context);
-          if (!popped && mounted) {
+          if (!context.mounted) return;
+
+          if (!popped) {
             Navigator.pushReplacementNamed(context, '/chats');
           }
         },

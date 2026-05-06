@@ -72,7 +72,7 @@ class GlmShell extends StatelessWidget {
                           children: [
                             header,
                             Expanded(child: body),
-                            if (bottomNavigation != null) bottomNavigation!,
+                            ?bottomNavigation,
                           ],
                         ),
                       ),
