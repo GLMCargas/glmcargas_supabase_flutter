@@ -14,7 +14,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   final supabase = Supabase.instance.client;
 
   List<Map<String, dynamic>> cargas = [];
-  final Set<dynamic> cardsAbertos = {};
+  int? _cardAbertoIndex;
   final Set<int> _solicitacoesEmEnvio = {};
   final Map<int, _SolicitacaoViagemInfo> _solicitacoesPorViagem = {};
 
@@ -127,13 +127,9 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     };
   }
 
-  void _toggleCard(dynamic id) {
+  void _toggleCard(int index) {
     setState(() {
-      if (cardsAbertos.contains(id)) {
-        cardsAbertos.remove(id);
-      } else {
-        cardsAbertos.add(id);
-      }
+      _cardAbertoIndex = _cardAbertoIndex == index ? null : index;
     });
   }
 
@@ -292,6 +288,24 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     return '$texto kg';
   }
 
+  String formatarCompatibilidadeVeiculo(Map<String, dynamic> viagem) {
+    const chavesCompatibilidade = [
+      'compatibilidade_veiculo',
+      'compatibilidadeVeiculo',
+      'compatibilidade',
+      'dimensoes',
+    ];
+
+    for (final chave in chavesCompatibilidade) {
+      final texto = viagem[chave]?.toString().trim();
+      if (texto != null && texto.isNotEmpty) {
+        return texto;
+      }
+    }
+
+    return '-';
+  }
+
   String inicialEmpresa(dynamic empresa) {
     final texto = empresa?.toString().trim();
 
@@ -374,7 +388,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                 onChanged: (value) async {
                   setState(() {
                     ufSelecionada = value ?? 'Todas';
-                    cardsAbertos.clear();
+                    _cardAbertoIndex = null;
                   });
                   await _carregarCargas();
                 },
@@ -427,7 +441,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                         itemBuilder: (context, index) {
                           final v = cargas[index];
                           final viagemId = _extractTripId(v);
-                          final aberta = cardsAbertos.contains(v['id']);
+                          final aberta = _cardAbertoIndex == index;
                           final solicitacao = viagemId != null
                               ? _solicitacoesPorViagem[viagemId]
                               : null;
@@ -437,7 +451,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                           final chatDisponivel = viagemId != null;
 
                           return GestureDetector(
-                            onTap: () => _toggleCard(v['id']),
+                            onTap: () => _toggleCard(index),
                             child: AnimatedContainer(
                               duration: const Duration(milliseconds: 220),
                               margin: const EdgeInsets.only(bottom: 14),
@@ -523,8 +537,8 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                     const Divider(color: Color(0xFFF3DEC7)),
                                     const SizedBox(height: 8),
                                     _detalhe(
-                                      'Dimensões',
-                                      '${v['dimensoes'] ?? '-'}',
+                                      'Compatibilidade de veiculo',
+                                      formatarCompatibilidadeVeiculo(v),
                                     ),
                                     _detalhe(
                                       'Peso',
