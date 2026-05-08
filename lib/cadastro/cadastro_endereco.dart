@@ -1,5 +1,10 @@
+import 'dart:convert';
+
 import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:http/http.dart' as http;
+import 'package:mask_text_input_formatter/mask_text_input_formatter.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'cadastro_tipo_veiculo.dart';
@@ -22,7 +27,15 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
   final _numeroController = TextEditingController();
   final _complementoController = TextEditingController();
 
+  final _numeroFocusNode = FocusNode();
+  final _cepMask = MaskTextInputFormatter(
+    mask: '#####-###',
+    filter: {'#': RegExp(r'[0-9]')},
+  );
+
   bool _semNumero = false;
+  bool _isBuscandoCep = false;
+  String? _ultimoCepBuscado;
 
   @override
   void dispose() {
@@ -33,7 +46,81 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
     _ufController.dispose();
     _numeroController.dispose();
     _complementoController.dispose();
+    _numeroFocusNode.dispose();
     super.dispose();
+  }
+
+  String _somenteDigitos(String valor) {
+    return valor.replaceAll(RegExp(r'\D'), '');
+  }
+
+  void _mostrarMensagem(String mensagem, {bool erro = false}) {
+    if (!mounted) return;
+
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(mensagem),
+        backgroundColor: erro ? Colors.red : null,
+      ),
+    );
+  }
+
+  Future<void> _buscarCep({bool force = false}) async {
+    final cep = _somenteDigitos(_cepController.text);
+
+    if (cep.length != 8 || _isBuscandoCep) {
+      return;
+    }
+
+    if (!force && _ultimoCepBuscado == cep) {
+      return;
+    }
+
+    setState(() => _isBuscandoCep = true);
+
+    try {
+      final response = await http.get(
+        Uri.parse('https://viacep.com.br/ws/$cep/json/'),
+      );
+
+      if (response.statusCode != 200) {
+        throw StateError('Falha ao consultar o CEP.');
+      }
+
+      final data = jsonDecode(response.body);
+      if (data is! Map<String, dynamic>) {
+        throw StateError('Resposta invalida do servico de CEP.');
+      }
+
+      if (data['erro'] == true) {
+        _mostrarMensagem('CEP nao encontrado. Confira o numero informado.');
+        return;
+      }
+
+      _ruaController.text = (data['logradouro'] ?? '').toString().trim();
+      _bairroController.text = (data['bairro'] ?? '').toString().trim();
+      _cidadeController.text = (data['localidade'] ?? '').toString().trim();
+      _ufController.text = (data['uf'] ?? '').toString().trim().toUpperCase();
+
+      final complemento = (data['complemento'] ?? '').toString().trim();
+      if (complemento.isNotEmpty && _complementoController.text.trim().isEmpty) {
+        _complementoController.text = complemento;
+      }
+
+      _ultimoCepBuscado = cep;
+
+      if (!mounted) return;
+      FocusScope.of(context).requestFocus(_numeroFocusNode);
+    } catch (_) {
+      _mostrarMensagem(
+        'Nao foi possivel buscar o CEP agora. Voce pode preencher manualmente.',
+        erro: true,
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _isBuscandoCep = false);
+      }
+    }
   }
 
   Future<void> _salvarEndereco() async {
@@ -43,15 +130,13 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
     final user = supabase.auth.currentUser;
 
     if (user == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro: usuario nao autenticado.')),
-      );
+      _mostrarMensagem('Erro: usuario nao autenticado.', erro: true);
       return;
     }
 
     final dados = {
       'Usuario_CaminhoneiroID': user.id,
-      'CEP': int.tryParse(_cepController.text.replaceAll(RegExp(r'\D'), '')),
+      'CEP': int.tryParse(_somenteDigitos(_cepController.text)),
       'Rua': _ruaController.text.trim(),
       'Bairro': _bairroController.text.trim(),
       'Cidade': _cidadeController.text.trim(),
@@ -76,27 +161,50 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
         MaterialPageRoute(builder: (_) => const CadastroTipoVeiculoScreen()),
       );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Erro ao salvar: $e'),
-          backgroundColor: Colors.red,
-        ),
-      );
+      _mostrarMensagem('Erro ao salvar: $e', erro: true);
     }
   }
 
   @override
   Widget build(BuildContext context) {
     return GlmFormPage(
-      title: 'Endereço',
-      subtitle: 'Complete com os dados do seu endereço.',
+      title: 'Endereco',
+      subtitle: 'Complete com os dados do seu endereco.',
       onBack: () => Navigator.pop(context),
       child: Form(
         key: _formKey,
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
           children: [
-            _campo('CEP', _cepController),
+            _campo(
+              'CEP',
+              _cepController,
+              keyboardType: TextInputType.number,
+              inputFormatters: [_cepMask],
+              onChanged: (value) {
+                final cep = _somenteDigitos(value);
+
+                if (cep.length < 8) {
+                  _ultimoCepBuscado = null;
+                  return;
+                }
+
+                _buscarCep();
+              },
+              suffixIcon: _isBuscandoCep
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: SizedBox(
+                        width: 18,
+                        height: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    )
+                  : IconButton(
+                      onPressed: () => _buscarCep(force: true),
+                      icon: const Icon(Icons.search_rounded),
+                    ),
+            ),
             const SizedBox(height: 16),
             _campo('Rua', _ruaController),
             const SizedBox(height: 16),
@@ -115,8 +223,11 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
               children: [
                 Expanded(
                   child: _campo(
-                    'Número',
+                    'Numero',
                     _numeroController,
+                    focusNode: _numeroFocusNode,
+                    keyboardType: TextInputType.number,
+                    inputFormatters: [FilteringTextInputFormatter.digitsOnly],
                     validatorOverride: (v) {
                       if (_semNumero) return null;
                       return (v == null || v.isEmpty)
@@ -169,14 +280,24 @@ class _CadastroEnderecoScreenState extends State<CadastroEnderecoScreen> {
     TextEditingController controller, {
     String? Function(String?)? validatorOverride,
     bool requiredField = true,
+    TextInputType? keyboardType,
+    List<TextInputFormatter>? inputFormatters,
+    void Function(String)? onChanged,
+    Widget? suffixIcon,
+    FocusNode? focusNode,
   }) {
     return TextFormField(
       controller: controller,
+      focusNode: focusNode,
+      keyboardType: keyboardType,
+      inputFormatters: inputFormatters,
+      onChanged: onChanged,
       validator:
           validatorOverride ??
           (v) => (v == null || v.isEmpty) ? 'Campo obrigatorio' : null,
       decoration: InputDecoration(
         labelText: requiredField ? '$label *' : label,
+        suffixIcon: suffixIcon,
       ),
     );
   }
