@@ -240,6 +240,9 @@ class _SignupPageState extends State<SignupPage> {
         final signUpResponse = await supabase.auth.signUp(
           email: _emailController.text.trim(),
           password: _passwordController.text.trim(),
+          data: const {
+            'origem_conta': 'motorista_app',
+          },
         );
 
         final user = signUpResponse.user;
