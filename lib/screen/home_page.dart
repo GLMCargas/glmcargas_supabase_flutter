@@ -1132,103 +1132,123 @@ class _RoutePreviewCard extends StatelessWidget {
       child: GestureDetector(
         onTap: onOpen,
         child: Container(
-          height: 156,
+          height: 192,
           clipBehavior: Clip.antiAlias,
           decoration: BoxDecoration(
             color: const Color(0xFFFFFBF7),
             borderRadius: BorderRadius.circular(18),
             border: Border.all(color: GlmColors.border),
           ),
-          child: Stack(
-            fit: StackFit.expand,
+          child: Column(
             children: [
-              CustomPaint(painter: _RoutePreviewPainter()),
-              Container(color: Colors.white.withValues(alpha: 0.08)),
-              Padding(
-                padding: const EdgeInsets.all(14),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              SizedBox(
+                height: 88,
+                child: Stack(
+                  fit: StackFit.expand,
                   children: [
-                    Row(
-                      children: [
-                        Container(
-                          width: 34,
-                          height: 34,
-                          decoration: const BoxDecoration(
-                            color: GlmColors.accent,
-                            shape: BoxShape.circle,
-                          ),
-                          child: Icon(
-                            point.stage == _NavigationStage.coleta
-                                ? Icons.inventory_2_outlined
-                                : Icons.flag_outlined,
-                            color: Colors.white,
-                            size: 19,
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                point.title,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: GlmColors.textPrimary,
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w800,
-                                ),
-                              ),
-                              Text(
-                                point.label,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
-                                  color: GlmColors.textMuted,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    CustomPaint(
+                      painter: _RoutePreviewPainter(stage: point.stage),
                     ),
-                    const Spacer(),
-                    Text(
-                      point.address,
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
-                        color: GlmColors.textPrimary,
-                        fontSize: 13,
-                        height: 1.25,
-                        fontWeight: FontWeight.w700,
+                    Positioned(
+                      top: 12,
+                      left: 12,
+                      child: Container(
+                        height: 34,
+                        padding: const EdgeInsets.symmetric(horizontal: 12),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.94),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(color: GlmColors.border),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.black.withValues(alpha: 0.06),
+                              blurRadius: 12,
+                              offset: const Offset(0, 5),
+                            ),
+                          ],
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(
+                              point.stage == _NavigationStage.coleta
+                                  ? Icons.inventory_2_outlined
+                                  : Icons.flag_outlined,
+                              color: GlmColors.accentStrong,
+                              size: 18,
+                            ),
+                            const SizedBox(width: 7),
+                            Text(
+                              point.label,
+                              style: const TextStyle(
+                                color: GlmColors.textPrimary,
+                                fontSize: 12,
+                                fontWeight: FontWeight.w800,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: const [
-                        Text(
-                          'Abrir no Google Maps',
-                          style: TextStyle(
-                            color: GlmColors.accentStrong,
-                            fontSize: 13,
-                            fontWeight: FontWeight.w800,
-                          ),
-                        ),
-                        SizedBox(width: 4),
-                        Icon(
-                          Icons.open_in_new_rounded,
-                          size: 16,
-                          color: GlmColors.accentStrong,
-                        ),
-                      ],
-                    ),
                   ],
+                ),
+              ),
+              Expanded(
+                child: Container(
+                  width: double.infinity,
+                  decoration: const BoxDecoration(
+                    color: Color(0xFFFFFBF7),
+                    border: Border(top: BorderSide(color: Color(0xFFF3DEC7))),
+                  ),
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        point.title,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: GlmColors.textPrimary,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w800,
+                          height: 1.15,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        point.address,
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: GlmColors.textPrimary,
+                          fontSize: 13,
+                          height: 1.25,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const Spacer(),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: const [
+                          Text(
+                            'Abrir no Google Maps',
+                            style: TextStyle(
+                              color: GlmColors.accentStrong,
+                              fontSize: 13,
+                              fontWeight: FontWeight.w800,
+                            ),
+                          ),
+                          SizedBox(width: 5),
+                          Icon(
+                            Icons.open_in_new_rounded,
+                            size: 16,
+                            color: GlmColors.accentStrong,
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ],
@@ -1240,55 +1260,125 @@ class _RoutePreviewCard extends StatelessWidget {
 }
 
 class _RoutePreviewPainter extends CustomPainter {
+  const _RoutePreviewPainter({required this.stage});
+
+  final _NavigationStage stage;
+
   @override
   void paint(Canvas canvas, Size size) {
+    final backgroundPaint = Paint()..color = const Color(0xFFFFF2E5);
     final roadPaint = Paint()
-      ..color = const Color(0xFFF0DDC8)
+      ..color = const Color(0xFFE9D3BE)
       ..strokeWidth = 2
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final thinRoadPaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.68)
+      ..strokeWidth = 5
+      ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
     final routePaint = Paint()
       ..color = GlmColors.accent
-      ..strokeWidth = 5
+      ..strokeWidth = 6
+      ..strokeCap = StrokeCap.round
+      ..style = PaintingStyle.stroke;
+    final routeShadowPaint = Paint()
+      ..color = GlmColors.accentStrong.withValues(alpha: 0.16)
+      ..strokeWidth = 10
       ..strokeCap = StrokeCap.round
       ..style = PaintingStyle.stroke;
     final markerPaint = Paint()..color = GlmColors.accentStrong;
     final startPaint = Paint()..color = GlmColors.textMuted;
 
-    for (var i = 0; i < 4; i++) {
-      final y = size.height * (0.18 + i * 0.2);
-      canvas.drawLine(
-        Offset(-20, y),
-        Offset(size.width + 20, y + (i.isEven ? 16 : -14)),
-        roadPaint,
-      );
+    canvas.drawRect(Offset.zero & size, backgroundPaint);
+
+    final roads = <Path>[
+      Path()
+        ..moveTo(-20, size.height * 0.24)
+        ..quadraticBezierTo(
+          size.width * 0.38,
+          size.height * 0.08,
+          size.width + 20,
+          size.height * 0.22,
+        ),
+      Path()
+        ..moveTo(-20, size.height * 0.64)
+        ..quadraticBezierTo(
+          size.width * 0.42,
+          size.height * 0.78,
+          size.width + 20,
+          size.height * 0.58,
+        ),
+      Path()
+        ..moveTo(size.width * 0.2, -10)
+        ..quadraticBezierTo(
+          size.width * 0.36,
+          size.height * 0.42,
+          size.width * 0.28,
+          size.height + 10,
+        ),
+      Path()
+        ..moveTo(size.width * 0.72, -10)
+        ..quadraticBezierTo(
+          size.width * 0.62,
+          size.height * 0.5,
+          size.width * 0.76,
+          size.height + 10,
+        ),
+    ];
+
+    for (final road in roads) {
+      canvas.drawPath(road, thinRoadPaint);
+      canvas.drawPath(road, roadPaint);
     }
 
     final path = Path()
-      ..moveTo(size.width * 0.16, size.height * 0.72)
+      ..moveTo(size.width * 0.12, size.height * 0.72)
       ..cubicTo(
-        size.width * 0.32,
-        size.height * 0.28,
-        size.width * 0.58,
-        size.height * 0.88,
-        size.width * 0.82,
+        size.width * 0.28,
         size.height * 0.34,
+        size.width * 0.56,
+        size.height * 0.84,
+        size.width * 0.86,
+        size.height * 0.32,
       );
 
+    canvas.drawPath(path, routeShadowPaint);
     canvas.drawPath(path, routePaint);
-    canvas.drawCircle(
-      Offset(size.width * 0.16, size.height * 0.72),
-      7,
-      startPaint,
+
+    final startOffset = Offset(size.width * 0.12, size.height * 0.72);
+    final endOffset = Offset(size.width * 0.86, size.height * 0.32);
+    final endIcon = stage == _NavigationStage.coleta
+        ? Icons.inventory_2_outlined
+        : Icons.flag_outlined;
+
+    canvas.drawCircle(startOffset, 7, Paint()..color = Colors.white);
+    canvas.drawCircle(startOffset, 5, startPaint);
+    canvas.drawCircle(endOffset, 17, Paint()..color = Colors.white);
+    canvas.drawCircle(endOffset, 14, markerPaint);
+    final textPainter = TextPainter(
+      text: TextSpan(
+        text: String.fromCharCode(endIcon.codePoint),
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: 17,
+          fontFamily: endIcon.fontFamily,
+          package: endIcon.fontPackage,
+        ),
+      ),
+      textDirection: TextDirection.ltr,
     );
+    textPainter
+      ..layout()
+      ..paint(
+        canvas,
+        endOffset - Offset(textPainter.width / 2, textPainter.height / 2),
+      );
+
     canvas.drawCircle(
-      Offset(size.width * 0.82, size.height * 0.34),
-      10,
-      markerPaint,
-    );
-    canvas.drawCircle(
-      Offset(size.width * 0.82, size.height * 0.34),
-      4,
-      Paint()..color = Colors.white,
+      Offset(size.width * 0.94, size.height * 0.82),
+      24,
+      Paint()..color = Colors.white.withValues(alpha: 0.32),
     );
   }
 
