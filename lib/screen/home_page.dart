@@ -1,6 +1,12 @@
+import 'dart:convert';
+
 import 'package:app/widgets/glm_ui.dart';
 import 'package:app/widgets/menu_lateral.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:http/http.dart' as http;
+import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -395,9 +401,9 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
       case _ExecucaoViagemStatus.emEntrega:
         return _pointFromTrip(viagem, stage: _NavigationStage.entrega);
       case _ExecucaoViagemStatus.aguardandoRetirada:
-      case _ExecucaoViagemStatus.retiradaInformada:
       case null:
         return _pointFromTrip(viagem, stage: _NavigationStage.coleta);
+      case _ExecucaoViagemStatus.retiradaInformada:
       case _ExecucaoViagemStatus.entregaInformada:
       case _ExecucaoViagemStatus.concluida:
       case _ExecucaoViagemStatus.cancelada:
@@ -591,6 +597,41 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     }
   }
 
+  String _execucaoTitle(_SolicitacaoViagemInfo solicitacao) {
+    switch (solicitacao.statusExecucao) {
+      case _ExecucaoViagemStatus.aguardandoRetirada:
+      case null:
+        return 'Rota liberada para coleta';
+      case _ExecucaoViagemStatus.retiradaInformada:
+        return 'Coleta aguardando confirmacao';
+      case _ExecucaoViagemStatus.emEntrega:
+        return 'Rota liberada para entrega';
+      case _ExecucaoViagemStatus.entregaInformada:
+        return 'Entrega aguardando confirmacao';
+      case _ExecucaoViagemStatus.concluida:
+        return 'Viagem concluida';
+      case _ExecucaoViagemStatus.cancelada:
+        return 'Viagem cancelada';
+    }
+  }
+
+  IconData _execucaoIcon(_SolicitacaoViagemInfo solicitacao) {
+    switch (solicitacao.statusExecucao) {
+      case _ExecucaoViagemStatus.aguardandoRetirada:
+      case null:
+        return Icons.inventory_2_outlined;
+      case _ExecucaoViagemStatus.retiradaInformada:
+      case _ExecucaoViagemStatus.entregaInformada:
+        return Icons.hourglass_top_rounded;
+      case _ExecucaoViagemStatus.emEntrega:
+        return Icons.flag_outlined;
+      case _ExecucaoViagemStatus.concluida:
+        return Icons.check_circle_outline_rounded;
+      case _ExecucaoViagemStatus.cancelada:
+        return Icons.cancel_outlined;
+    }
+  }
+
   Widget _buildNavigationFlow(
     Map<String, dynamic> viagem,
     _SolicitacaoViagemInfo solicitacao,
@@ -602,9 +643,57 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         GlmInfoCard(
-          child: Text(
-            _execucaoDescription(solicitacao),
-            style: const TextStyle(color: GlmColors.textPrimary, height: 1.4),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: const BoxDecoration(
+                      color: GlmColors.accentSoft,
+                      shape: BoxShape.circle,
+                    ),
+                    child: Icon(
+                      _execucaoIcon(solicitacao),
+                      color: GlmColors.accentStrong,
+                      size: 21,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          _execucaoTitle(solicitacao),
+                          style: const TextStyle(
+                            color: GlmColors.textPrimary,
+                            fontSize: 15,
+                            fontWeight: FontWeight.w800,
+                            height: 1.2,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          _execucaoDescription(solicitacao),
+                          style: const TextStyle(
+                            color: GlmColors.textMuted,
+                            fontSize: 13,
+                            height: 1.35,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              _TripExecutionTimeline(solicitacao: solicitacao),
+            ],
           ),
         ),
         if (point != null) ...[
@@ -1119,139 +1208,456 @@ class _NavigationPoint {
   }
 }
 
-class _RoutePreviewCard extends StatelessWidget {
+class _RoutePreviewCard extends StatefulWidget {
   const _RoutePreviewCard({required this.point, required this.onOpen});
 
   final _NavigationPoint point;
   final VoidCallback onOpen;
 
   @override
+  State<_RoutePreviewCard> createState() => _RoutePreviewCardState();
+}
+
+class _RoutePreviewCardState extends State<_RoutePreviewCard> {
+  static const _mapboxAccessToken = String.fromEnvironment(
+    'MAPBOX_ACCESS_TOKEN',
+  );
+
+  late Future<_RoutePreviewData> _routeFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _routeFuture = _loadRoutePreview();
+  }
+
+  @override
+  void didUpdateWidget(covariant _RoutePreviewCard oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.point.mapsDestination != widget.point.mapsDestination ||
+        oldWidget.point.stage != widget.point.stage) {
+      _routeFuture = _loadRoutePreview();
+    }
+  }
+
+  Future<_RoutePreviewData> _loadRoutePreview() async {
+    if (!widget.point.hasCoordinates) {
+      return const _RoutePreviewData(
+        message: 'Coordenadas da carga indisponiveis.',
+      );
+    }
+
+    final destination = LatLng(widget.point.latitude!, widget.point.longitude!);
+
+    if (_mapboxAccessToken.isEmpty) {
+      return _RoutePreviewData(
+        destination: destination,
+        message: 'Token do Mapbox nao configurado.',
+      );
+    }
+
+    final origin = await _getDriverLocation();
+
+    if (origin == null) {
+      return _RoutePreviewData(
+        destination: destination,
+        message: 'Ative a localizacao para ver a rota ate a carga.',
+      );
+    }
+
+    final route = await _fetchMapboxRoute(
+      origin: origin,
+      destination: destination,
+    );
+
+    return _RoutePreviewData(
+      origin: origin,
+      destination: destination,
+      route: route.isEmpty ? [origin, destination] : route,
+      message: route.isEmpty ? 'Rota aproximada ate a carga.' : null,
+    );
+  }
+
+  Future<LatLng?> _getDriverLocation() async {
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    if (!serviceEnabled) return null;
+
+    var permission = await Geolocator.checkPermission();
+    if (permission == LocationPermission.denied) {
+      permission = await Geolocator.requestPermission();
+    }
+
+    if (permission == LocationPermission.denied ||
+        permission == LocationPermission.deniedForever) {
+      return null;
+    }
+
+    final position = await Geolocator.getCurrentPosition(
+      locationSettings: const LocationSettings(
+        accuracy: LocationAccuracy.high,
+        timeLimit: Duration(seconds: 12),
+      ),
+    );
+
+    return LatLng(position.latitude, position.longitude);
+  }
+
+  Future<List<LatLng>> _fetchMapboxRoute({
+    required LatLng origin,
+    required LatLng destination,
+  }) async {
+    final path =
+        'https://api.mapbox.com/directions/v5/mapbox/driving/'
+        '${_coordinateForMapbox(origin)};${_coordinateForMapbox(destination)}';
+    final uri = Uri.parse(path).replace(
+      queryParameters: const {
+        'geometries': 'geojson',
+        'overview': 'full',
+        'alternatives': 'false',
+        'steps': 'false',
+        'access_token': _mapboxAccessToken,
+      },
+    );
+
+    try {
+      final response = await http.get(uri).timeout(const Duration(seconds: 12));
+      if (response.statusCode != 200) return const [];
+
+      final body = jsonDecode(response.body) as Map<String, dynamic>;
+      final routes = body['routes'];
+      if (routes is! List || routes.isEmpty) return const [];
+
+      final firstRoute = routes.first;
+      if (firstRoute is! Map<String, dynamic>) return const [];
+
+      final geometry = firstRoute['geometry'];
+      if (geometry is! Map<String, dynamic>) return const [];
+
+      final coordinates = geometry['coordinates'];
+      if (coordinates is! List) return const [];
+
+      return coordinates
+          .whereType<List>()
+          .where((coordinate) => coordinate.length >= 2)
+          .map(
+            (coordinate) => LatLng(
+              (coordinate[1] as num).toDouble(),
+              (coordinate[0] as num).toDouble(),
+            ),
+          )
+          .toList(growable: false);
+    } catch (_) {
+      return const [];
+    }
+  }
+
+  String _coordinateForMapbox(LatLng point) {
+    return '${point.longitude.toStringAsFixed(6)},'
+        '${point.latitude.toStringAsFixed(6)}';
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(
-        onTap: onOpen,
-        child: Container(
-          height: 192,
-          clipBehavior: Clip.antiAlias,
-          decoration: BoxDecoration(
-            color: const Color(0xFFFFFBF7),
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: GlmColors.border),
-          ),
-          child: Column(
-            children: [
-              SizedBox(
-                height: 88,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    CustomPaint(
-                      painter: _RoutePreviewPainter(stage: point.stage),
-                    ),
-                    Positioned(
-                      top: 12,
-                      left: 12,
-                      child: Container(
-                        height: 34,
-                        padding: const EdgeInsets.symmetric(horizontal: 12),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.94),
-                          borderRadius: BorderRadius.circular(999),
-                          border: Border.all(color: GlmColors.border),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.06),
-                              blurRadius: 12,
-                              offset: const Offset(0, 5),
-                            ),
-                          ],
+    return Container(
+      height: 212,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        color: const Color(0xFFFFFBF7),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: GlmColors.border),
+      ),
+      child: Column(
+        children: [
+          SizedBox(
+            height: 112,
+            child: Stack(
+              fit: StackFit.expand,
+              children: [
+                FutureBuilder<_RoutePreviewData>(
+                  future: _routeFuture,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState != ConnectionState.done) {
+                      return const _RouteMapLoading();
+                    }
+
+                    final data = snapshot.data;
+                    if (data == null || !data.canShowMap) {
+                      return _RouteMapFallback(
+                        message: data?.message ?? 'Mapa indisponivel agora.',
+                      );
+                    }
+
+                    return _RouteMiniMap(
+                      data: data,
+                      mapboxAccessToken: _mapboxAccessToken,
+                    );
+                  },
+                ),
+                Positioned(
+                  top: 12,
+                  left: 12,
+                  child: Container(
+                    height: 34,
+                    padding: const EdgeInsets.symmetric(horizontal: 12),
+                    decoration: BoxDecoration(
+                      color: Colors.white.withValues(alpha: 0.94),
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(color: GlmColors.border),
+                      boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withValues(alpha: 0.06),
+                          blurRadius: 12,
+                          offset: const Offset(0, 5),
                         ),
+                      ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          widget.point.stage == _NavigationStage.coleta
+                              ? Icons.inventory_2_outlined
+                              : Icons.flag_outlined,
+                          color: GlmColors.accentStrong,
+                          size: 18,
+                        ),
+                        const SizedBox(width: 7),
+                        Text(
+                          widget.point.label,
+                          style: const TextStyle(
+                            color: GlmColors.textPrimary,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Expanded(
+            child: Container(
+              width: double.infinity,
+              decoration: const BoxDecoration(
+                color: Color(0xFFFFFBF7),
+                border: Border(top: BorderSide(color: Color(0xFFF3DEC7))),
+              ),
+              padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    widget.point.title,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: GlmColors.textPrimary,
+                      fontSize: 16,
+                      fontWeight: FontWeight.w800,
+                      height: 1.15,
+                    ),
+                  ),
+                  const SizedBox(height: 5),
+                  Text(
+                    widget.point.address,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: GlmColors.textPrimary,
+                      fontSize: 13,
+                      height: 1.25,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const Spacer(),
+                  MouseRegion(
+                    cursor: SystemMouseCursors.click,
+                    child: GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: widget.onOpen,
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(
-                              point.stage == _NavigationStage.coleta
-                                  ? Icons.inventory_2_outlined
-                                  : Icons.flag_outlined,
-                              color: GlmColors.accentStrong,
-                              size: 18,
-                            ),
-                            const SizedBox(width: 7),
+                          children: const [
                             Text(
-                              point.label,
-                              style: const TextStyle(
-                                color: GlmColors.textPrimary,
-                                fontSize: 12,
+                              'Abrir no Google Maps',
+                              style: TextStyle(
+                                color: GlmColors.accentStrong,
+                                fontSize: 13,
                                 fontWeight: FontWeight.w800,
                               ),
                             ),
+                            SizedBox(width: 5),
+                            Icon(
+                              Icons.open_in_new_rounded,
+                              size: 16,
+                              color: GlmColors.accentStrong,
+                            ),
                           ],
                         ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-              Expanded(
-                child: Container(
-                  width: double.infinity,
-                  decoration: const BoxDecoration(
-                    color: Color(0xFFFFFBF7),
-                    border: Border(top: BorderSide(color: Color(0xFFF3DEC7))),
-                  ),
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 12),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        point.title,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: GlmColors.textPrimary,
-                          fontSize: 16,
-                          fontWeight: FontWeight.w800,
-                          height: 1.15,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        point.address,
-                        maxLines: 2,
-                        overflow: TextOverflow.ellipsis,
-                        style: const TextStyle(
-                          color: GlmColors.textPrimary,
-                          fontSize: 13,
-                          height: 1.25,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      const Spacer(),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          Text(
-                            'Abrir no Google Maps',
-                            style: TextStyle(
-                              color: GlmColors.accentStrong,
-                              fontSize: 13,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(width: 5),
-                          Icon(
-                            Icons.open_in_new_rounded,
-                            size: 16,
-                            color: GlmColors.accentStrong,
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RoutePreviewData {
+  const _RoutePreviewData({
+    this.origin,
+    this.destination,
+    this.route = const [],
+    this.message,
+  });
+
+  final LatLng? origin;
+  final LatLng? destination;
+  final List<LatLng> route;
+  final String? message;
+
+  bool get canShowMap => destination != null;
+
+  List<LatLng> get cameraPoints {
+    if (route.length > 1) return route;
+    return [?origin, ?destination];
+  }
+}
+
+class _RouteMiniMap extends StatelessWidget {
+  const _RouteMiniMap({required this.data, required this.mapboxAccessToken});
+
+  final _RoutePreviewData data;
+  final String mapboxAccessToken;
+
+  @override
+  Widget build(BuildContext context) {
+    final destination = data.destination!;
+    final cameraPoints = data.cameraPoints;
+    final hasRoute = data.route.length > 1;
+
+    return FlutterMap(
+      options: MapOptions(
+        initialCenter: destination,
+        initialZoom: 13,
+        initialCameraFit: cameraPoints.length > 1
+            ? CameraFit.coordinates(
+                coordinates: cameraPoints,
+                padding: const EdgeInsets.fromLTRB(34, 28, 34, 24),
+                maxZoom: 15,
+              )
+            : null,
+        interactionOptions: const InteractionOptions(
+          flags:
+              InteractiveFlag.drag |
+              InteractiveFlag.flingAnimation |
+              InteractiveFlag.pinchMove |
+              InteractiveFlag.pinchZoom |
+              InteractiveFlag.doubleTapZoom,
+        ),
+      ),
+      children: [
+        TileLayer(
+          urlTemplate:
+              'https://api.mapbox.com/styles/v1/mapbox/streets-v12/'
+              'tiles/256/{z}/{x}/{y}@2x?access_token=$mapboxAccessToken',
+          userAgentPackageName: 'br.com.glmcargas.app',
+        ),
+        if (hasRoute)
+          PolylineLayer(
+            polylines: [
+              Polyline(
+                points: data.route,
+                color: GlmColors.accent,
+                borderColor: Colors.white,
+                borderStrokeWidth: 3,
+                strokeWidth: 5,
               ),
             ],
+          ),
+        MarkerLayer(
+          markers: [
+            if (data.origin != null)
+              Marker(
+                point: data.origin!,
+                width: 28,
+                height: 28,
+                child: _RouteMarker(
+                  color: GlmColors.textMuted,
+                  icon: Icons.my_location_rounded,
+                ),
+              ),
+            Marker(
+              point: destination,
+              width: 34,
+              height: 34,
+              child: _RouteMarker(
+                color: GlmColors.accentStrong,
+                icon: Icons.inventory_2_outlined,
+              ),
+            ),
+          ],
+        ),
+        if (data.message != null)
+          Positioned(
+            right: 10,
+            bottom: 10,
+            child: _RouteMapMessage(message: data.message!),
+          ),
+      ],
+    );
+  }
+}
+
+class _RouteMarker extends StatelessWidget {
+  const _RouteMarker({required this.color, required this.icon});
+
+  final Color color;
+  final IconData icon;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        border: Border.all(color: Colors.white, width: 3),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Icon(icon, color: Colors.white, size: 16),
+    );
+  }
+}
+
+class _RouteMapLoading extends StatelessWidget {
+  const _RouteMapLoading();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFFFF2E5),
+      child: const Center(
+        child: SizedBox(
+          width: 22,
+          height: 22,
+          child: CircularProgressIndicator(
+            strokeWidth: 2.5,
+            color: GlmColors.accentStrong,
           ),
         ),
       ),
@@ -1259,131 +1665,256 @@ class _RoutePreviewCard extends StatelessWidget {
   }
 }
 
-class _RoutePreviewPainter extends CustomPainter {
-  const _RoutePreviewPainter({required this.stage});
+class _RouteMapFallback extends StatelessWidget {
+  const _RouteMapFallback({required this.message});
 
-  final _NavigationStage stage;
+  final String message;
 
   @override
-  void paint(Canvas canvas, Size size) {
-    final backgroundPaint = Paint()..color = const Color(0xFFFFF2E5);
-    final roadPaint = Paint()
-      ..color = const Color(0xFFE9D3BE)
-      ..strokeWidth = 2
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final thinRoadPaint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.68)
-      ..strokeWidth = 5
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final routePaint = Paint()
-      ..color = GlmColors.accent
-      ..strokeWidth = 6
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final routeShadowPaint = Paint()
-      ..color = GlmColors.accentStrong.withValues(alpha: 0.16)
-      ..strokeWidth = 10
-      ..strokeCap = StrokeCap.round
-      ..style = PaintingStyle.stroke;
-    final markerPaint = Paint()..color = GlmColors.accentStrong;
-    final startPaint = Paint()..color = GlmColors.textMuted;
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFFFFF2E5),
+      alignment: Alignment.center,
+      padding: const EdgeInsets.symmetric(horizontal: 18),
+      child: _RouteMapMessage(message: message),
+    );
+  }
+}
 
-    canvas.drawRect(Offset.zero & size, backgroundPaint);
+class _RouteMapMessage extends StatelessWidget {
+  const _RouteMapMessage({required this.message});
 
-    final roads = <Path>[
-      Path()
-        ..moveTo(-20, size.height * 0.24)
-        ..quadraticBezierTo(
-          size.width * 0.38,
-          size.height * 0.08,
-          size.width + 20,
-          size.height * 0.22,
-        ),
-      Path()
-        ..moveTo(-20, size.height * 0.64)
-        ..quadraticBezierTo(
-          size.width * 0.42,
-          size.height * 0.78,
-          size.width + 20,
-          size.height * 0.58,
-        ),
-      Path()
-        ..moveTo(size.width * 0.2, -10)
-        ..quadraticBezierTo(
-          size.width * 0.36,
-          size.height * 0.42,
-          size.width * 0.28,
-          size.height + 10,
-        ),
-      Path()
-        ..moveTo(size.width * 0.72, -10)
-        ..quadraticBezierTo(
-          size.width * 0.62,
-          size.height * 0.5,
-          size.width * 0.76,
-          size.height + 10,
-        ),
-    ];
+  final String message;
 
-    for (final road in roads) {
-      canvas.drawPath(road, thinRoadPaint);
-      canvas.drawPath(road, roadPaint);
-    }
-
-    final path = Path()
-      ..moveTo(size.width * 0.12, size.height * 0.72)
-      ..cubicTo(
-        size.width * 0.28,
-        size.height * 0.34,
-        size.width * 0.56,
-        size.height * 0.84,
-        size.width * 0.86,
-        size.height * 0.32,
-      );
-
-    canvas.drawPath(path, routeShadowPaint);
-    canvas.drawPath(path, routePaint);
-
-    final startOffset = Offset(size.width * 0.12, size.height * 0.72);
-    final endOffset = Offset(size.width * 0.86, size.height * 0.32);
-    final endIcon = stage == _NavigationStage.coleta
-        ? Icons.inventory_2_outlined
-        : Icons.flag_outlined;
-
-    canvas.drawCircle(startOffset, 7, Paint()..color = Colors.white);
-    canvas.drawCircle(startOffset, 5, startPaint);
-    canvas.drawCircle(endOffset, 17, Paint()..color = Colors.white);
-    canvas.drawCircle(endOffset, 14, markerPaint);
-    final textPainter = TextPainter(
-      text: TextSpan(
-        text: String.fromCharCode(endIcon.codePoint),
-        style: TextStyle(
-          color: Colors.white,
-          fontSize: 17,
-          fontFamily: endIcon.fontFamily,
-          package: endIcon.fontPackage,
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      constraints: const BoxConstraints(maxWidth: 230),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.94),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: GlmColors.border),
+      ),
+      child: Text(
+        message,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: GlmColors.textPrimary,
+          fontSize: 11,
+          fontWeight: FontWeight.w700,
+          height: 1.15,
         ),
       ),
-      textDirection: TextDirection.ltr,
     );
-    textPainter
-      ..layout()
-      ..paint(
-        canvas,
-        endOffset - Offset(textPainter.width / 2, textPainter.height / 2),
-      );
+  }
+}
 
-    canvas.drawCircle(
-      Offset(size.width * 0.94, size.height * 0.82),
-      24,
-      Paint()..color = Colors.white.withValues(alpha: 0.32),
-    );
+enum _TripStepState { pending, active, waiting, done, canceled }
+
+class _TripExecutionTimeline extends StatelessWidget {
+  const _TripExecutionTimeline({required this.solicitacao});
+
+  final _SolicitacaoViagemInfo solicitacao;
+
+  _TripStepState get _coletaState {
+    switch (solicitacao.statusExecucao) {
+      case _ExecucaoViagemStatus.aguardandoRetirada:
+      case null:
+        return _TripStepState.active;
+      case _ExecucaoViagemStatus.retiradaInformada:
+        return _TripStepState.waiting;
+      case _ExecucaoViagemStatus.emEntrega:
+      case _ExecucaoViagemStatus.entregaInformada:
+      case _ExecucaoViagemStatus.concluida:
+        return _TripStepState.done;
+      case _ExecucaoViagemStatus.cancelada:
+        return _TripStepState.canceled;
+    }
+  }
+
+  _TripStepState get _entregaState {
+    switch (solicitacao.statusExecucao) {
+      case _ExecucaoViagemStatus.aguardandoRetirada:
+      case _ExecucaoViagemStatus.retiradaInformada:
+      case null:
+        return _TripStepState.pending;
+      case _ExecucaoViagemStatus.emEntrega:
+        return _TripStepState.active;
+      case _ExecucaoViagemStatus.entregaInformada:
+        return _TripStepState.waiting;
+      case _ExecucaoViagemStatus.concluida:
+        return _TripStepState.done;
+      case _ExecucaoViagemStatus.cancelada:
+        return _TripStepState.canceled;
+    }
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  Widget build(BuildContext context) {
+    final coletaState = _coletaState;
+    final entregaState = _entregaState;
+
+    return Column(
+      children: [
+        Row(
+          children: [
+            _TripStepDot(icon: Icons.inventory_2_outlined, state: coletaState),
+            Expanded(
+              child: Container(
+                height: 3,
+                margin: const EdgeInsets.symmetric(horizontal: 8),
+                decoration: BoxDecoration(
+                  color: coletaState == _TripStepState.done
+                      ? GlmColors.accent
+                      : const Color(0xFFF3DEC7),
+                  borderRadius: BorderRadius.circular(999),
+                ),
+              ),
+            ),
+            _TripStepDot(icon: Icons.flag_outlined, state: entregaState),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: _TripStepText(
+                title: 'Coleta',
+                subtitle: _labelForState(coletaState),
+                state: coletaState,
+                textAlign: TextAlign.left,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: _TripStepText(
+                title: 'Entrega',
+                subtitle: _labelForState(entregaState),
+                state: entregaState,
+                textAlign: TextAlign.right,
+              ),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  String _labelForState(_TripStepState state) {
+    switch (state) {
+      case _TripStepState.pending:
+        return 'Pendente';
+      case _TripStepState.active:
+        return 'Em rota';
+      case _TripStepState.waiting:
+        return 'Aguardando empresa';
+      case _TripStepState.done:
+        return 'Confirmada';
+      case _TripStepState.canceled:
+        return 'Cancelada';
+    }
+  }
+}
+
+class _TripStepDot extends StatelessWidget {
+  const _TripStepDot({required this.icon, required this.state});
+
+  final IconData icon;
+  final _TripStepState state;
+
+  Color get _color {
+    switch (state) {
+      case _TripStepState.active:
+        return GlmColors.accentStrong;
+      case _TripStepState.waiting:
+        return const Color(0xFFB26A00);
+      case _TripStepState.done:
+        return const Color(0xFF2E7D32);
+      case _TripStepState.canceled:
+        return const Color(0xFFC62828);
+      case _TripStepState.pending:
+        return GlmColors.textMuted;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final active = state != _TripStepState.pending;
+
+    return Container(
+      width: 34,
+      height: 34,
+      decoration: BoxDecoration(
+        color: active ? _color : const Color(0xFFFFF2E5),
+        shape: BoxShape.circle,
+        border: Border.all(color: active ? _color : GlmColors.border),
+      ),
+      child: Icon(
+        state == _TripStepState.done ? Icons.check_rounded : icon,
+        color: active ? Colors.white : GlmColors.textMuted,
+        size: 18,
+      ),
+    );
+  }
+}
+
+class _TripStepText extends StatelessWidget {
+  const _TripStepText({
+    required this.title,
+    required this.subtitle,
+    required this.state,
+    required this.textAlign,
+  });
+
+  final String title;
+  final String subtitle;
+  final _TripStepState state;
+  final TextAlign textAlign;
+
+  Color get _titleColor {
+    return state == _TripStepState.pending
+        ? GlmColors.textMuted
+        : GlmColors.textPrimary;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: textAlign == TextAlign.right
+          ? CrossAxisAlignment.end
+          : CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          textAlign: textAlign,
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: TextStyle(
+            color: _titleColor,
+            fontSize: 12,
+            fontWeight: FontWeight.w800,
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          subtitle,
+          textAlign: textAlign,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+          style: const TextStyle(
+            color: GlmColors.textMuted,
+            fontSize: 11,
+            height: 1.15,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 class _StatusChip extends StatelessWidget {

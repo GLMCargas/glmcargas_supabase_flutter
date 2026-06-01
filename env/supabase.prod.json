@@ -1,5 +1,6 @@
 {
   "APP_ENV": "prod",
   "NEXT_PUBLIC_SUPABASE_URL": "https://zzwbnyajtdvmcumdlfoj.supabase.co",
-  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_sBZxCSe_Ak3tiWEE0TuE0w_Ouk6UYbo"
+  "NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY": "sb_publishable_sBZxCSe_Ak3tiWEE0TuE0w_Ouk6UYbo",
+  "MAPBOX_ACCESS_TOKEN": ""
 }
