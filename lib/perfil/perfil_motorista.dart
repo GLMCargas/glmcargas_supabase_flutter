@@ -1,6 +1,10 @@
+import 'dart:io';
+
 import 'package:app/widgets/glm_ui.dart';
 import 'package:app/widgets/menu_lateral.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class PerfilMotoristaScreen extends StatefulWidget {
@@ -11,10 +15,16 @@ class PerfilMotoristaScreen extends StatefulWidget {
 }
 
 class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
+  final _supabase = Supabase.instance.client;
+  final _picker = ImagePicker();
+
   Map<String, dynamic>? usuario;
   Map<String, dynamic>? veiculo;
   bool carregando = true;
   bool _menuAberto = false;
+  bool _salvandoFoto = false;
+  File? _fotoSelecionada;
+  Uint8List? _fotoSelecionadaWeb;
 
   @override
   void initState() {
@@ -23,17 +33,15 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
   }
 
   Future<void> _carregarDados() async {
-    final supabase = Supabase.instance.client;
-
     if (!mounted) return;
     setState(() => carregando = true);
 
-    var user = supabase.auth.currentUser;
+    var user = _supabase.auth.currentUser;
 
     var tentativas = 0;
     while (user == null && tentativas < 10) {
       await Future.delayed(const Duration(milliseconds: 150));
-      user = supabase.auth.currentUser;
+      user = _supabase.auth.currentUser;
       tentativas++;
     }
 
@@ -48,13 +56,13 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
     }
 
     try {
-      final dadosUsuario = await supabase
+      final dadosUsuario = await _supabase
           .from('Usuario_Caminhoneiro')
           .select()
           .eq('id', user.id)
           .maybeSingle();
 
-      final dadosVeiculo = await supabase
+      final dadosVeiculo = await _supabase
           .from('Veiculo')
           .select()
           .eq('Usuario_CaminhoneiroID', user.id)
@@ -71,6 +79,122 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
       if (!mounted) return;
       setState(() => carregando = false);
     }
+  }
+
+  Future<void> _selecionarFotoPerfil() async {
+    if (_salvandoFoto) return;
+
+    final pickedFile = await _picker.pickImage(
+      source: ImageSource.gallery,
+      imageQuality: 70,
+    );
+
+    if (pickedFile == null) return;
+
+    if (kIsWeb) {
+      final bytes = await pickedFile.readAsBytes();
+      setState(() {
+        _fotoSelecionadaWeb = bytes;
+        _fotoSelecionada = null;
+      });
+    } else {
+      setState(() {
+        _fotoSelecionada = File(pickedFile.path);
+        _fotoSelecionadaWeb = null;
+      });
+    }
+
+    await _salvarFotoPerfil();
+  }
+
+  Future<void> _salvarFotoPerfil() async {
+    final user = _supabase.auth.currentUser;
+
+    if (user == null ||
+        (_fotoSelecionada == null && _fotoSelecionadaWeb == null)) {
+      return;
+    }
+
+    setState(() => _salvandoFoto = true);
+
+    try {
+      final filePath = 'fotos_motoristas/${user.id}.jpg';
+      final fileBytes = kIsWeb
+          ? _fotoSelecionadaWeb!
+          : await _fotoSelecionada!.readAsBytes();
+
+      await _supabase.storage
+          .from('fotos_motoristas')
+          .uploadBinary(
+            filePath,
+            fileBytes,
+            fileOptions: const FileOptions(
+              contentType: 'image/jpeg',
+              upsert: true,
+            ),
+          );
+
+      final fotoUrl = _supabase.storage
+          .from('fotos_motoristas')
+          .getPublicUrl(filePath);
+
+      final usuarioAtualizado = await _supabase
+          .from('Usuario_Caminhoneiro')
+          .update({'foto_url': fotoUrl})
+          .eq('id', user.id)
+          .select()
+          .maybeSingle();
+
+      if (usuarioAtualizado == null) {
+        throw Exception(
+          'A foto foi enviada, mas nao foi possivel salvar no perfil.',
+        );
+      }
+
+      if (!mounted) return;
+
+      setState(() {
+        usuario = usuarioAtualizado;
+        _fotoSelecionada = null;
+        _fotoSelecionadaWeb = null;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Foto de perfil atualizada com sucesso.')),
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Erro ao atualizar foto de perfil: $e. Se continuar, aplique a migration de update do perfil no Supabase.',
+          ),
+          backgroundColor: Colors.red,
+        ),
+      );
+    } finally {
+      if (mounted) {
+        setState(() => _salvandoFoto = false);
+      }
+    }
+  }
+
+  ImageProvider<Object>? _fotoPerfilAtual() {
+    if (kIsWeb && _fotoSelecionadaWeb != null) {
+      return MemoryImage(_fotoSelecionadaWeb!);
+    }
+
+    if (!kIsWeb && _fotoSelecionada != null) {
+      return FileImage(_fotoSelecionada!);
+    }
+
+    final fotoUrl = usuario?['foto_url']?.toString();
+    if (fotoUrl != null && fotoUrl.isNotEmpty) {
+      return NetworkImage(fotoUrl);
+    }
+
+    return null;
   }
 
   String _formatarData(dynamic valor) {
@@ -91,8 +215,51 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
     }
   }
 
+  void _visualizarFoto() {
+    final fotoPerfil = _fotoPerfilAtual();
+    if (fotoPerfil == null) return;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) {
+        return Dialog(
+          backgroundColor: Colors.black87,
+          insetPadding: const EdgeInsets.all(20),
+          child: Stack(
+            children: [
+              InteractiveViewer(
+                minScale: 0.8,
+                maxScale: 4,
+                child: AspectRatio(
+                  aspectRatio: 1,
+                  child: Image(
+                    image: fotoPerfil,
+                    fit: BoxFit.contain,
+                  ),
+                ),
+              ),
+              Positioned(
+                top: 8,
+                right: 8,
+                child: IconButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  icon: const Icon(Icons.close_rounded, color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    final temFoto = (usuario?['foto_url']?.toString().isNotEmpty ?? false) ||
+        _fotoSelecionada != null ||
+        _fotoSelecionadaWeb != null;
+    final fotoPerfil = _fotoPerfilAtual();
+
     return GlmShell(
       header: GlmHeader(
         onBack: () => Navigator.maybePop(context),
@@ -119,7 +286,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
               child: Padding(
                 padding: EdgeInsets.all(24),
                 child: Text(
-                  'Não foi possível carregar os dados do perfil.',
+                  'Nao foi possivel carregar os dados do perfil.',
                   textAlign: TextAlign.center,
                   style: TextStyle(fontSize: 16, color: GlmColors.textMuted),
                 ),
@@ -131,23 +298,58 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                 children: [
                   const GlmSectionHeader(
                     title: 'Meu perfil',
-                    subtitle:
-                        'Veja seus dados pessoais e o veículo cadastrado.',
+                    subtitle: 'Veja seus dados pessoais e o veiculo cadastrado.',
                   ),
                   const SizedBox(height: 24),
-                  CircleAvatar(
-                    radius: 56,
-                    backgroundColor: GlmColors.accentSoft,
-                    backgroundImage: usuario!['foto_url'] != null
-                        ? NetworkImage(usuario!['foto_url'])
-                        : null,
-                    child: usuario!['foto_url'] == null
-                        ? const Icon(
-                            Icons.person_rounded,
-                            size: 52,
-                            color: GlmColors.accentStrong,
-                          )
-                        : null,
+                  Stack(
+                    alignment: Alignment.bottomRight,
+                    children: [
+                      GestureDetector(
+                        onTap: temFoto ? _visualizarFoto : null,
+                        child: MouseRegion(
+                          cursor: temFoto
+                              ? SystemMouseCursors.click
+                              : MouseCursor.defer,
+                          child: CircleAvatar(
+                            radius: 56,
+                            backgroundColor: GlmColors.accentSoft,
+                            backgroundImage: fotoPerfil,
+                            child: fotoPerfil == null
+                                ? const Icon(
+                                    Icons.person_rounded,
+                                    size: 52,
+                                    color: GlmColors.accentStrong,
+                                  )
+                                : null,
+                          ),
+                        ),
+                      ),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: GlmColors.border),
+                        ),
+                        child: IconButton(
+                          onPressed:
+                              _salvandoFoto ? null : _selecionarFotoPerfil,
+                          icon: _salvandoFoto
+                              ? const SizedBox(
+                                  width: 18,
+                                  height: 18,
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
+                                )
+                              : Icon(
+                                  temFoto
+                                      ? Icons.edit_rounded
+                                      : Icons.add_a_photo_outlined,
+                                  color: GlmColors.accentStrong,
+                                ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 16),
                   Text(
@@ -198,7 +400,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                           'Nascimento',
                           _formatarData(usuario!['data_nascimento']),
                         ),
-                        _linhaInfo('Gênero', usuario!['genero']),
+                        _linhaInfo('Genero', usuario!['genero']),
                       ],
                     ),
                   ),
@@ -208,7 +410,7 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         const Text(
-                          'Veículo cadastrado',
+                          'Veiculo cadastrado',
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.w800,
@@ -218,12 +420,12 @@ class _PerfilMotoristaScreenState extends State<PerfilMotoristaScreen> {
                         const SizedBox(height: 14),
                         if (veiculo == null)
                           const Text(
-                            'Nenhum veículo cadastrado ainda.',
+                            'Nenhum veiculo cadastrado ainda.',
                             style: TextStyle(color: GlmColors.textMuted),
                           )
                         else ...[
                           _linhaInfo(
-                            'Tipo do veículo',
+                            'Tipo do veiculo',
                             veiculo!['TipoVeiculo'],
                           ),
                           _linhaInfo('Carroceria', veiculo!['TipoBau']),

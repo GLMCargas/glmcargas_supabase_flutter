@@ -1,3 +1,5 @@
+import 'package:app/auth/account_access.dart';
+import 'package:app/services/app_error_messages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -24,7 +26,7 @@ class _LoginPageState extends State<LoginPage> {
       if (!mounted) return;
 
       if (_supabase.auth.currentUser != null) {
-        Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+        Navigator.pushNamedAndRemoveUntil(context, '/entry', (route) => false);
       }
     });
   }
@@ -56,17 +58,28 @@ class _LoginPageState extends State<LoginPage> {
         await _supabase.auth.refreshSession();
       }
 
+      await const AccountAccessService().resolveCurrentUser();
+
       if (!mounted) return;
-      Navigator.pushNamedAndRemoveUntil(context, '/home', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(context, '/entry', (route) => false);
+    } on InvalidDriverAppAccountException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
     } on AuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(SnackBar(content: Text(e.message)));
+      ).showSnackBar(
+        SnackBar(content: Text(AppErrorMessages.authLogin(e))),
+      );
     } catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro inesperado ao fazer login.')),
+        SnackBar(content: Text(AppErrorMessages.authLogin(e))),
       );
     } finally {
       if (mounted) {

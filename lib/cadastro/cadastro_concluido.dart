@@ -1,10 +1,13 @@
 import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CadastroConcluidoScreen extends StatelessWidget {
   const CadastroConcluidoScreen({super.key});
 
-  void _voltarLogin(BuildContext context) {
+  Future<void> _voltarLogin(BuildContext context) async {
+    await Supabase.instance.client.auth.signOut();
+    if (!context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
   }
 
@@ -47,7 +50,9 @@ class CadastroConcluidoScreen extends StatelessWidget {
           GlmPrimaryButton(
             label: 'Voltar para o login',
             icon: Icons.login_rounded,
-            onPressed: () => _voltarLogin(context),
+            onPressed: () {
+              _voltarLogin(context);
+            },
           ),
         ],
       ),

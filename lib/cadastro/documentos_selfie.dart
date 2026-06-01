@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:app/services/welcome_pending_email_service.dart';
 import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -86,6 +87,22 @@ class _DocumentosSelfieScreenState extends State<DocumentosSelfieScreen> {
         'tipo': 'Selfie',
         'url': path,
       });
+
+      try {
+        final motorista = await supabase
+            .from('Usuario_Caminhoneiro')
+            .select('email, nome, status')
+            .eq('id', user.id)
+            .single();
+
+        await const WelcomePendingEmailService().send(
+          email: motorista['email']?.toString() ?? '',
+          nome: motorista['nome']?.toString() ?? 'Motorista',
+          status: motorista['status']?.toString() ?? 'Pendente',
+        );
+      } catch (emailError) {
+        debugPrint('Não foi possível enviar email de boas-vindas: $emailError');
+      }
 
       if (!mounted) return;
 

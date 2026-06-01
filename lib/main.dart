@@ -1,3 +1,4 @@
+import 'package:app/auth/access_gate.dart';
 import 'package:app/config/supabase_config.dart';
 import 'package:app/perfil/perfil_motorista.dart';
 import 'package:app/screen/cadastro.dart';
@@ -26,10 +27,6 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final initialRoute = Supabase.instance.client.auth.currentSession == null
-        ? '/login'
-        : '/home';
-
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
@@ -102,14 +99,28 @@ class MyApp extends StatelessWidget {
           ),
         ),
       ),
-      initialRoute: initialRoute,
+      initialRoute: '/entry',
       routes: {
+        '/entry': (context) => AccessGate(
+              approvedBuilder: (_) => const HomeMotoristaScreen(),
+            ),
         '/login': (context) => const LoginPage(),
         '/cadastroMotorista': (_) => const SignupPage(),
-        '/home': (context) => const HomeMotoristaScreen(),
-        '/perfilMotorista': (context) => const PerfilMotoristaScreen(),
-        '/chats': (context) => const ChatsListPage(),
-        '/chat': (context) => const ChatPage(),
+        '/home': (context) => AccessGate(
+              approvedBuilder: (_) => const HomeMotoristaScreen(),
+            ),
+        '/perfilMotorista': (context) => AccessGate(
+              approvedBuilder: (_) => const PerfilMotoristaScreen(),
+            ),
+        '/chats': (context) => AccessGate(
+              approvedBuilder: (_) => const ChatsListPage(),
+            ),
+        '/chat': (context) => AccessGate(
+              approvedBuilder: (_) => const ChatPage(),
+            ),
+        '/statusConta': (context) => AccessGate(
+              approvedBuilder: (_) => const HomeMotoristaScreen(),
+            ),
       },
     );
   }

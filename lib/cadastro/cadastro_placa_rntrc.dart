@@ -1,5 +1,7 @@
+import 'package:app/services/app_error_messages.dart';
 import 'package:app/widgets/glm_ui.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
@@ -30,6 +32,43 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
     super.dispose();
   }
 
+  String _placaNormalizada(String valor) {
+    return valor.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
+  }
+
+  String _rntrcNormalizado(String valor) {
+    return valor.replaceAll(RegExp(r'\D'), '');
+  }
+
+  String? _validarPlaca(String? valor) {
+    final placa = _placaNormalizada(valor ?? '');
+
+    if (placa.isEmpty) {
+      return 'Campo obrigatorio';
+    }
+
+    final placaValida = RegExp(r'^[A-Z]{3}[A-Z0-9][A-Z0-9][A-Z0-9][A-Z0-9]$');
+    if (!placaValida.hasMatch(placa)) {
+      return 'Informe uma placa valida';
+    }
+
+    return null;
+  }
+
+  String? _validarRntrc(String? valor) {
+    final rntrc = _rntrcNormalizado(valor ?? '');
+
+    if (rntrc.isEmpty) {
+      return 'Campo obrigatorio';
+    }
+
+    if (rntrc.length != 8 && rntrc.length != 9) {
+      return 'Informe 8 numeros do RNTRC ou 9 com zero a esquerda';
+    }
+
+    return null;
+  }
+
   Future<void> _salvarVeiculo() async {
     if (!_formKey.currentState!.validate()) return;
 
@@ -38,7 +77,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
 
     if (user == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Erro: usuário não autenticado.')),
+        const SnackBar(content: Text('Erro: usuario nao autenticado.')),
       );
       return;
     }
@@ -50,7 +89,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
         v.tipoBau == null) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Erro interno: dados do veículo incompletos.'),
+          content: Text('Erro interno: dados do veiculo incompletos.'),
         ),
       );
       return;
@@ -65,8 +104,8 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
         'TipoVeiculo': v.tipoVeiculo,
         'BauVeiculo': v.bauVeiculo,
         'TipoBau': v.tipoBau,
-        'PlacaVeiculo': _placaController.text.trim(),
-        'RNTRC_ANTT': _rntrcController.text.trim(),
+        'PlacaVeiculo': _placaNormalizada(_placaController.text),
+        'RNTRC_ANTT': _rntrcNormalizado(_rntrcController.text),
       });
 
       if (!mounted) return;
@@ -78,7 +117,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('Erro ao salvar veículo: $e'),
+          content: Text(AppErrorMessages.signup(e)),
           backgroundColor: Colors.red,
         ),
       );
@@ -99,8 +138,8 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
   @override
   Widget build(BuildContext context) {
     return GlmFormPage(
-      title: 'Dados do veículo',
-      subtitle: 'Digite a placa e o RNTRC para concluir o cadastro do veículo.',
+      title: 'Dados do veiculo',
+      subtitle: 'Digite a placa e o RNTRC para concluir o cadastro do veiculo.',
       onBack: () => Navigator.pop(context),
       child: Form(
         key: _formKey,
@@ -109,16 +148,31 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
           children: [
             TextFormField(
               controller: _placaController,
-              decoration: const InputDecoration(labelText: 'Placa *'),
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
+              textCapitalization: TextCapitalization.characters,
+              inputFormatters: [
+                FilteringTextInputFormatter.allow(RegExp(r'[A-Za-z0-9]')),
+                LengthLimitingTextInputFormatter(7),
+                _PlacaVeiculoInputFormatter(),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'Placa *',
+                hintText: 'Ex.: ABC-1234',
+              ),
+              validator: _validarPlaca,
             ),
             const SizedBox(height: 16),
             TextFormField(
               controller: _rntrcController,
-              decoration: const InputDecoration(labelText: 'RNTRC (ANTT) *'),
-              validator: (v) =>
-                  v == null || v.isEmpty ? 'Campo obrigatório' : null,
+              keyboardType: TextInputType.number,
+              inputFormatters: [
+                FilteringTextInputFormatter.digitsOnly,
+                LengthLimitingTextInputFormatter(9),
+              ],
+              decoration: const InputDecoration(
+                labelText: 'RNTRC (ANTT) *',
+                hintText: 'Ex.: 12345678',
+              ),
+              validator: _validarRntrc,
             ),
             const SizedBox(height: 18),
             GlmInfoCard(
@@ -131,7 +185,7 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
                     SizedBox(width: 8),
                     Expanded(
                       child: Text(
-                        'Veja como localizar o número do RNTRC (ANTT).',
+                        'Veja como localizar o numero do RNTRC (ANTT).',
                         style: TextStyle(
                           color: GlmColors.textMuted,
                           decoration: TextDecoration.underline,
@@ -152,6 +206,31 @@ class _CadastroPlacaRntrcScreenState extends State<CadastroPlacaRntrcScreen> {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _PlacaVeiculoInputFormatter extends TextInputFormatter {
+  @override
+  TextEditingValue formatEditUpdate(
+    TextEditingValue oldValue,
+    TextEditingValue newValue,
+  ) {
+    final raw = newValue.text.replaceAll(RegExp(r'[^A-Za-z0-9]'), '').toUpperCase();
+    final limited = raw.length > 7 ? raw.substring(0, 7) : raw;
+
+    final buffer = StringBuffer();
+    for (var i = 0; i < limited.length; i++) {
+      if (i == 3) {
+        buffer.write('-');
+      }
+      buffer.write(limited[i]);
+    }
+
+    final formatted = buffer.toString();
+    return TextEditingValue(
+      text: formatted,
+      selection: TextSelection.collapsed(offset: formatted.length),
     );
   }
 }
