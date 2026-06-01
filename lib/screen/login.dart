@@ -1,3 +1,4 @@
+import 'package:app/auth/account_access.dart';
 import 'package:app/services/app_error_messages.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -57,8 +58,17 @@ class _LoginPageState extends State<LoginPage> {
         await _supabase.auth.refreshSession();
       }
 
+      await const AccountAccessService().resolveCurrentUser();
+
       if (!mounted) return;
       Navigator.pushNamedAndRemoveUntil(context, '/entry', (route) => false);
+    } on InvalidDriverAppAccountException catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(
+        SnackBar(content: Text(e.message)),
+      );
     } on AuthException catch (e) {
       if (!mounted) return;
       ScaffoldMessenger.of(

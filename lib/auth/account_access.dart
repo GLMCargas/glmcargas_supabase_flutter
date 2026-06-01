@@ -15,6 +15,15 @@ enum OnboardingStep {
   selfie,
 }
 
+class InvalidDriverAppAccountException implements Exception {
+  const InvalidDriverAppAccountException(this.message);
+
+  final String message;
+
+  @override
+  String toString() => message;
+}
+
 class AccountProfile {
   const AccountProfile({
     required this.id,
@@ -93,6 +102,16 @@ class AccountAccessService {
 
   SupabaseClient get _supabase => Supabase.instance.client;
 
+  bool _hasDriverAppSignupMetadata(User user) {
+    final metadata = user.userMetadata;
+    final origin =
+        metadata?['origem_conta']?.toString() ??
+        metadata?['account_origin']?.toString() ??
+        '';
+
+    return origin == 'motorista_app' || origin == 'driver_app';
+  }
+
   Future<AccountAccessResult> resolveCurrentUser() async {
     final session = _supabase.auth.currentSession;
     final user = session?.user ?? _supabase.auth.currentUser;
@@ -110,6 +129,13 @@ class AccountAccessService {
         .maybeSingle();
 
     if (data == null) {
+      if (!_hasDriverAppSignupMetadata(user)) {
+        await _supabase.auth.signOut();
+        throw const InvalidDriverAppAccountException(
+          'Esta conta nao esta habilitada para o app do motorista.',
+        );
+      }
+
       return const AccountAccessResult(
         state: AccountAccessState.onboarding,
         onboardingStep: OnboardingStep.profile,
