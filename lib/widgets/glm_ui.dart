@@ -11,7 +11,7 @@ class GlmColors {
   static const textMuted = Color(0xFF766250);
 }
 
-enum GlmBottomNavItem { home, profile, chats }
+enum GlmBottomNavItem { deliveries, home, profile, chats }
 
 class GlmShell extends StatelessWidget {
   const GlmShell({
@@ -242,18 +242,28 @@ class GlmBottomNavigation extends StatelessWidget {
         mainAxisAlignment: MainAxisAlignment.spaceEvenly,
         children: [
           _NavButton(
+            icon: Icons.assignment_turned_in_outlined,
+            label: 'Entregas',
+            active: current == GlmBottomNavItem.deliveries,
+            onTap: () =>
+                _go(context, '/minhasEntregas', GlmBottomNavItem.deliveries),
+          ),
+          _NavButton(
             icon: Icons.home_outlined,
+            label: 'Inicio',
             active: current == GlmBottomNavItem.home,
             onTap: () => _go(context, '/home', GlmBottomNavItem.home),
           ),
           _NavButton(
             icon: Icons.person_outline_rounded,
+            label: 'Perfil',
             active: current == GlmBottomNavItem.profile,
             onTap: () =>
                 _go(context, '/perfilMotorista', GlmBottomNavItem.profile),
           ),
           _NavButton(
             icon: Icons.chat_bubble_outline_rounded,
+            label: 'Chats',
             active: current == GlmBottomNavItem.chats,
             onTap: () => _go(context, '/chats', GlmBottomNavItem.chats),
           ),
@@ -266,30 +276,67 @@ class GlmBottomNavigation extends StatelessWidget {
 class _NavButton extends StatelessWidget {
   const _NavButton({
     required this.icon,
+    required this.label,
     required this.active,
     required this.onTap,
   });
 
   final IconData icon;
+  final String label;
   final bool active;
   final VoidCallback onTap;
 
   @override
   Widget build(BuildContext context) {
-    final child = active
+    final iconWidget = active
         ? Container(
-            padding: const EdgeInsets.all(10),
+            width: 36,
+            height: 36,
             decoration: const BoxDecoration(
               color: GlmColors.textPrimary,
               shape: BoxShape.circle,
             ),
-            child: Icon(icon, size: 24, color: Colors.white),
+            child: Icon(icon, size: 22, color: Colors.white),
           )
-        : Icon(icon, size: 30, color: GlmColors.textPrimary);
+        : SizedBox(
+            width: 36,
+            height: 36,
+            child: Icon(icon, size: 28, color: GlmColors.textPrimary),
+          );
 
-    return MouseRegion(
-      cursor: SystemMouseCursors.click,
-      child: GestureDetector(onTap: onTap, child: child),
+    return Expanded(
+      child: Tooltip(
+        message: label,
+        child: MouseRegion(
+          cursor: SystemMouseCursors.click,
+          child: GestureDetector(
+            behavior: HitTestBehavior.opaque,
+            onTap: onTap,
+            child: SizedBox(
+              height: 56,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  iconWidget,
+                  const SizedBox(height: 3),
+                  Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: TextStyle(
+                      color: active
+                          ? GlmColors.textPrimary
+                          : GlmColors.textMuted,
+                      fontSize: 11,
+                      fontWeight: active ? FontWeight.w800 : FontWeight.w700,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
     );
   }
 }

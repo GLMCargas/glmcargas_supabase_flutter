@@ -4,8 +4,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 void main() {
   group('Componentes GLM UI', () {
-    testWidgets('GlmFormPage exibe titulo, subtitulo e conteudo',
-        (tester) async {
+    testWidgets('GlmFormPage exibe titulo, subtitulo e conteudo', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         const MaterialApp(
           home: GlmFormPage(
@@ -23,8 +24,9 @@ void main() {
       expect(find.text('CARGAS'), findsOneWidget);
     });
 
-    testWidgets('GlmPrimaryButton executa callback quando habilitado',
-        (tester) async {
+    testWidgets('GlmPrimaryButton executa callback quando habilitado', (
+      tester,
+    ) async {
       var pressed = false;
 
       await tester.pumpWidget(
@@ -42,8 +44,7 @@ void main() {
       expect(pressed, isTrue);
     });
 
-    testWidgets('GlmPrimaryButton em loading desabilita acao',
-        (tester) async {
+    testWidgets('GlmPrimaryButton em loading desabilita acao', (tester) async {
       var pressed = false;
 
       await tester.pumpWidget(
@@ -58,7 +59,7 @@ void main() {
         ),
       );
 
-      await tester.tap(find.byType(ElevatedButton), warnIfMissed: false);
+      await tester.tap(find.text('Salvar'), warnIfMissed: false);
       expect(pressed, isFalse);
       expect(find.byType(CircularProgressIndicator), findsOneWidget);
     });
