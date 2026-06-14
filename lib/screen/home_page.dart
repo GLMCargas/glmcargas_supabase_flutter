@@ -10,8 +10,17 @@ import 'package:latlong2/latlong.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+enum MotoristaHomeMode { disponiveis, minhasEntregas }
+
+enum _MinhasEntregasTab { ativas, historico }
+
 class HomeMotoristaScreen extends StatefulWidget {
-  const HomeMotoristaScreen({super.key});
+  const HomeMotoristaScreen({
+    super.key,
+    this.mode = MotoristaHomeMode.disponiveis,
+  });
+
+  final MotoristaHomeMode mode;
 
   @override
   State<HomeMotoristaScreen> createState() => _HomeMotoristaScreenState();
@@ -30,6 +39,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   bool carregandoCargas = true;
   String? erroCargas;
   String ufSelecionada = 'Todas';
+  _MinhasEntregasTab _minhasEntregasTab = _MinhasEntregasTab.ativas;
 
   final List<String> ufs = const [
     'Todas',
@@ -62,6 +72,10 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     'TO',
   ];
 
+  bool get _mostrandoMinhasEntregas {
+    return widget.mode == MotoristaHomeMode.minhasEntregas;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -86,26 +100,18 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     });
 
     try {
-      final response = await supabase.rpc(
-        'listar_cargas_publicadas_motorista',
-        params: {
-          'p_uf_coleta': ufSelecionada == 'Todas' ? null : ufSelecionada,
-        },
-      );
-
-      final loadedTrips = await _complementarDadosNavegacao(
-        List<Map<String, dynamic>>.from(response ?? const []),
-      );
-      final loadedRequests = await _carregarSolicitacoes();
+      final result = _mostrandoMinhasEntregas
+          ? await _carregarMinhasEntregas()
+          : await _carregarCargasDisponiveis();
 
       if (!mounted) return;
 
       setState(() {
-        cargas = loadedTrips;
+        cargas = result.cargas;
         carregandoCargas = false;
         _solicitacoesPorViagem
           ..clear()
-          ..addAll(loadedRequests);
+          ..addAll(result.solicitacoes);
       });
     } catch (e) {
       debugPrint('Erro ao carregar cargas: $e');
@@ -117,6 +123,101 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
         erroCargas = 'Não foi possível carregar as cargas desta região.';
       });
     }
+  }
+
+  Future<_CargasLoadResult> _carregarCargasDisponiveis() async {
+    final response = await supabase.rpc(
+      'listar_cargas_publicadas_motorista',
+      params: {'p_uf_coleta': ufSelecionada == 'Todas' ? null : ufSelecionada},
+    );
+
+    final loadedTrips = await _complementarDadosNavegacao(
+      List<Map<String, dynamic>>.from(response ?? const []),
+    );
+    final loadedRequests = await _carregarSolicitacoes();
+    final availableTrips = loadedTrips
+        .where((trip) {
+          final tripId = _extractTripId(trip);
+          final solicitacao = tripId == null ? null : loadedRequests[tripId];
+
+          return solicitacao?.status != _SolicitacaoViagemStatus.aceita;
+        })
+        .toList(growable: false);
+
+    return _CargasLoadResult(
+      cargas: availableTrips,
+      solicitacoes: loadedRequests,
+    );
+  }
+
+  Future<_CargasLoadResult> _carregarMinhasEntregas() async {
+    final user = supabase.auth.currentUser;
+    if (user == null) {
+      return const _CargasLoadResult(cargas: [], solicitacoes: {});
+    }
+
+    final data = await supabase
+        .from('solicitacoes_viagem')
+        .select(
+          'id, viagem_id, room_id, status, status_execucao, '
+          'coleta_informada_em, coleta_confirmada_em, '
+          'entrega_informada_em, entrega_confirmada_em, created_at',
+        )
+        .eq('motorista_user_id', user.id)
+        .eq('status', 'Aceita')
+        .order('created_at', ascending: false);
+
+    final requestList = List<Map<String, dynamic>>.from(
+      data as List,
+    ).map(_SolicitacaoViagemInfo.fromMap).toList(growable: false);
+    final tripIds = requestList
+        .map((request) => request.viagemId)
+        .toSet()
+        .toList(growable: false);
+
+    if (tripIds.isEmpty) {
+      return const _CargasLoadResult(cargas: [], solicitacoes: {});
+    }
+
+    final tripRows = await supabase
+        .from('Viagens')
+        .select(
+          'id, empresa, produto, origem_cidade, origem_uf, '
+          'destino_cidade, destino_uf, peso, valor, dimensoes, '
+          'data_limite_entrega, coleta_endereco, coleta_latitude, '
+          'coleta_longitude, coleta_place_id, entrega_endereco, '
+          'entrega_latitude, entrega_longitude, entrega_place_id',
+        )
+        .inFilter('id', tripIds);
+    final tripsById = {
+      for (final trip in List<Map<String, dynamic>>.from(tripRows as List))
+        if (trip['id'] is num) (trip['id'] as num).toInt(): trip,
+    };
+
+    final activeTrips = <Map<String, dynamic>>[];
+    final finishedTrips = <Map<String, dynamic>>[];
+    final requests = <int, _SolicitacaoViagemInfo>{};
+
+    for (final solicitacao in requestList) {
+      final loadedTrip = tripsById[solicitacao.viagemId];
+      if (loadedTrip == null) continue;
+      requests[solicitacao.viagemId] = solicitacao;
+
+      final viagem = Map<String, dynamic>.from(loadedTrip);
+      viagem['id'] ??= solicitacao.viagemId;
+      viagem['viagem_id'] ??= solicitacao.viagemId;
+
+      if (solicitacao.isFinalizada) {
+        finishedTrips.add(viagem);
+      } else {
+        activeTrips.add(viagem);
+      }
+    }
+
+    return _CargasLoadResult(
+      cargas: [...activeTrips, ...finishedTrips],
+      solicitacoes: requests,
+    );
   }
 
   Future<List<Map<String, dynamic>>> _complementarDadosNavegacao(
@@ -264,6 +365,11 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
 
       setState(() {
         _solicitacoesPorViagem[viagemId] = solicitacao;
+        if (!_mostrandoMinhasEntregas &&
+            solicitacao.status == _SolicitacaoViagemStatus.aceita) {
+          cargas.removeWhere((carga) => _extractTripId(carga) == viagemId);
+          _cardAbertoIndex = null;
+        }
       });
 
       final message = solicitacao.createdNow
@@ -579,6 +685,39 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     }
   }
 
+  Color _cardStatusColor(_SolicitacaoViagemInfo solicitacao) {
+    if (solicitacao.isFinalizada) return const Color(0xFF607D8B);
+    if (solicitacao.status == _SolicitacaoViagemStatus.aceita) {
+      return const Color(0xFF2E7D32);
+    }
+
+    return _statusColor(solicitacao.status);
+  }
+
+  String _cardStatusLabel(_SolicitacaoViagemInfo solicitacao) {
+    if (solicitacao.isFinalizada) return 'Finalizada';
+
+    if (solicitacao.status != _SolicitacaoViagemStatus.aceita) {
+      return _statusLabel(solicitacao.status);
+    }
+
+    switch (solicitacao.statusExecucao) {
+      case _ExecucaoViagemStatus.aguardandoRetirada:
+      case null:
+        return 'Aguardando coleta';
+      case _ExecucaoViagemStatus.retiradaInformada:
+        return 'Coleta informada';
+      case _ExecucaoViagemStatus.emEntrega:
+        return 'Em entrega';
+      case _ExecucaoViagemStatus.entregaInformada:
+        return 'Entrega informada';
+      case _ExecucaoViagemStatus.concluida:
+        return 'Finalizada';
+      case _ExecucaoViagemStatus.cancelada:
+        return 'Cancelada';
+    }
+  }
+
   String _execucaoDescription(_SolicitacaoViagemInfo solicitacao) {
     switch (solicitacao.statusExecucao) {
       case _ExecucaoViagemStatus.aguardandoRetirada:
@@ -726,13 +865,47 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final title = _mostrandoMinhasEntregas
+        ? 'Minhas Entregas'
+        : 'Cargas Disponiveis';
+    final activeDeliveries = cargas
+        .where((carga) {
+          final viagemId = _extractTripId(carga);
+          final solicitacao = viagemId == null
+              ? null
+              : _solicitacoesPorViagem[viagemId];
+          return !(solicitacao?.isFinalizada ?? false);
+        })
+        .toList(growable: false);
+    final historyDeliveries = cargas
+        .where((carga) {
+          final viagemId = _extractTripId(carga);
+          final solicitacao = viagemId == null
+              ? null
+              : _solicitacoesPorViagem[viagemId];
+          return solicitacao?.isFinalizada ?? false;
+        })
+        .toList(growable: false);
+    final displayedCargas = !_mostrandoMinhasEntregas
+        ? cargas
+        : _minhasEntregasTab == _MinhasEntregasTab.ativas
+        ? activeDeliveries
+        : historyDeliveries;
+    final emptyMessage = !_mostrandoMinhasEntregas
+        ? 'Nenhuma carga disponivel.'
+        : _minhasEntregasTab == _MinhasEntregasTab.ativas
+        ? 'Nenhuma carga ativa no momento.'
+        : 'Nenhuma carga finalizada no historico.';
+
     return GlmShell(
       header: GlmHeader(
         onBack: () => Navigator.maybePop(context),
         onMenu: () => setState(() => _menuAberto = true),
       ),
-      bottomNavigation: const GlmBottomNavigation(
-        current: GlmBottomNavItem.home,
+      bottomNavigation: GlmBottomNavigation(
+        current: _mostrandoMinhasEntregas
+            ? GlmBottomNavItem.deliveries
+            : GlmBottomNavItem.home,
       ),
       overlays: [
         AnimatedPositioned(
@@ -749,27 +922,42 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
         padding: const EdgeInsets.fromLTRB(20, 20, 20, 0),
         child: Column(
           children: [
-            const GlmSectionHeader(title: 'Cargas Disponíveis'),
-            const SizedBox(height: 20),
-            GlmInfoCard(
-              child: DropdownButtonFormField<String>(
-                initialValue: ufSelecionada,
-                decoration: const InputDecoration(labelText: 'UF de coleta'),
-                items: ufs.map((uf) {
-                  return DropdownMenuItem<String>(
-                    value: uf,
-                    child: Text(uf == 'Todas' ? 'Todos os estados' : uf),
-                  );
-                }).toList(),
-                onChanged: (value) async {
+            GlmSectionHeader(title: title),
+            if (!_mostrandoMinhasEntregas) ...[
+              const SizedBox(height: 20),
+              GlmInfoCard(
+                child: DropdownButtonFormField<String>(
+                  initialValue: ufSelecionada,
+                  decoration: const InputDecoration(labelText: 'UF de coleta'),
+                  items: ufs.map((uf) {
+                    return DropdownMenuItem<String>(
+                      value: uf,
+                      child: Text(uf == 'Todas' ? 'Todos os estados' : uf),
+                    );
+                  }).toList(),
+                  onChanged: (value) async {
+                    setState(() {
+                      ufSelecionada = value ?? 'Todas';
+                      _cardAbertoIndex = null;
+                    });
+                    await _carregarCargas();
+                  },
+                ),
+              ),
+            ] else ...[
+              const SizedBox(height: 16),
+              _MinhasEntregasTabs(
+                current: _minhasEntregasTab,
+                activeCount: activeDeliveries.length,
+                historyCount: historyDeliveries.length,
+                onChanged: (tab) {
                   setState(() {
-                    ufSelecionada = value ?? 'Todas';
+                    _minhasEntregasTab = tab;
                     _cardAbertoIndex = null;
                   });
-                  await _carregarCargas();
                 },
               ),
-            ),
+            ],
             const SizedBox(height: 18),
             Expanded(
               child: carregandoCargas
@@ -800,20 +988,20 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                         ),
                       ),
                     )
-                  : cargas.isEmpty
-                  ? const Center(
+                  : displayedCargas.isEmpty
+                  ? Center(
                       child: Text(
-                        'Nenhuma carga disponivel.',
-                        style: TextStyle(color: GlmColors.textMuted),
+                        emptyMessage,
+                        style: const TextStyle(color: GlmColors.textMuted),
                       ),
                     )
                   : RefreshIndicator(
                       onRefresh: _carregarCargas,
                       child: ListView.builder(
                         padding: EdgeInsets.zero,
-                        itemCount: cargas.length,
+                        itemCount: displayedCargas.length,
                         itemBuilder: (context, index) {
-                          final v = cargas[index];
+                          final v = displayedCargas[index];
                           final viagemId = _extractTripId(v);
                           final aberta = _cardAbertoIndex == index;
                           final solicitacao = viagemId != null
@@ -826,6 +1014,8 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                           final solicitacaoAceita =
                               solicitacao?.status ==
                               _SolicitacaoViagemStatus.aceita;
+                          final viagemFinalizada =
+                              solicitacao?.isFinalizada ?? false;
                           final mostrarPreviewColeta =
                               solicitacao == null ||
                               solicitacao.status ==
@@ -844,12 +1034,16 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                               margin: const EdgeInsets.only(bottom: 14),
                               padding: const EdgeInsets.all(16),
                               decoration: BoxDecoration(
-                                color: aberta
+                                color: viagemFinalizada
+                                    ? const Color(0xFFF4F2EF)
+                                    : aberta
                                     ? const Color(0xFFFFE8D1)
                                     : const Color(0xFFFFF8F1),
                                 borderRadius: BorderRadius.circular(20),
                                 border: Border.all(
-                                  color: aberta
+                                  color: viagemFinalizada
+                                      ? const Color(0xFFB8AEA4)
+                                      : aberta
                                       ? GlmColors.accent
                                       : GlmColors.border,
                                 ),
@@ -894,11 +1088,11 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                             if (solicitacao != null) ...[
                                               const SizedBox(height: 8),
                                               _StatusChip(
-                                                label: _statusLabel(
-                                                  solicitacao.status,
+                                                label: _cardStatusLabel(
+                                                  solicitacao,
                                                 ),
-                                                color: _statusColor(
-                                                  solicitacao.status,
+                                                color: _cardStatusColor(
+                                                  solicitacao,
                                                 ),
                                               ),
                                             ],
@@ -966,26 +1160,30 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                       const SizedBox(height: 14),
                                       _buildNavigationFlow(v, solicitacao),
                                     ],
-                                    const SizedBox(height: 14),
-                                    GlmPrimaryButton(
-                                      label: solicitacao == null
-                                          ? 'Solicitar esta viagem'
-                                          : 'Solicitação ${_statusLabel(solicitacao.status).toLowerCase()}',
-                                      icon: solicitacao == null
-                                          ? Icons.assignment_turned_in_outlined
-                                          : solicitacao.status ==
-                                                _SolicitacaoViagemStatus.aceita
-                                          ? Icons.check_circle_outline_rounded
-                                          : solicitacao.status ==
-                                                _SolicitacaoViagemStatus
-                                                    .recusada
-                                          ? Icons.cancel_outlined
-                                          : Icons.schedule_rounded,
-                                      loading: enviando,
-                                      onPressed: solicitacao == null
-                                          ? () => _solicitarViagem(v)
-                                          : null,
-                                    ),
+                                    if (!_mostrandoMinhasEntregas) ...[
+                                      const SizedBox(height: 14),
+                                      GlmPrimaryButton(
+                                        label: solicitacao == null
+                                            ? 'Solicitar esta viagem'
+                                            : 'Solicitação ${_statusLabel(solicitacao.status).toLowerCase()}',
+                                        icon: solicitacao == null
+                                            ? Icons
+                                                  .assignment_turned_in_outlined
+                                            : solicitacao.status ==
+                                                  _SolicitacaoViagemStatus
+                                                      .aceita
+                                            ? Icons.check_circle_outline_rounded
+                                            : solicitacao.status ==
+                                                  _SolicitacaoViagemStatus
+                                                      .recusada
+                                            ? Icons.cancel_outlined
+                                            : Icons.schedule_rounded,
+                                        loading: enviando,
+                                        onPressed: solicitacao == null
+                                            ? () => _solicitarViagem(v)
+                                            : null,
+                                      ),
+                                    ],
                                     const SizedBox(height: 10),
                                     GlmOutlinedAction(
                                       label: solicitacao == null
@@ -1025,6 +1223,69 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
             TextSpan(text: value),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _CargasLoadResult {
+  const _CargasLoadResult({required this.cargas, required this.solicitacoes});
+
+  final List<Map<String, dynamic>> cargas;
+  final Map<int, _SolicitacaoViagemInfo> solicitacoes;
+}
+
+class _MinhasEntregasTabs extends StatelessWidget {
+  const _MinhasEntregasTabs({
+    required this.current,
+    required this.activeCount,
+    required this.historyCount,
+    required this.onChanged,
+  });
+
+  final _MinhasEntregasTab current;
+  final int activeCount;
+  final int historyCount;
+  final ValueChanged<_MinhasEntregasTab> onChanged;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: SegmentedButton<_MinhasEntregasTab>(
+        segments: [
+          ButtonSegment(
+            value: _MinhasEntregasTab.ativas,
+            icon: const Icon(Icons.local_shipping_outlined, size: 18),
+            label: Text('Ativas ($activeCount)'),
+          ),
+          ButtonSegment(
+            value: _MinhasEntregasTab.historico,
+            icon: const Icon(Icons.history_rounded, size: 18),
+            label: Text('Historico ($historyCount)'),
+          ),
+        ],
+        selected: {current},
+        showSelectedIcon: false,
+        style: ButtonStyle(
+          foregroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? Colors.white
+                : GlmColors.textPrimary,
+          ),
+          backgroundColor: WidgetStateProperty.resolveWith(
+            (states) => states.contains(WidgetState.selected)
+                ? GlmColors.textPrimary
+                : const Color(0xFFFFFBF7),
+          ),
+          side: WidgetStateProperty.all(
+            const BorderSide(color: GlmColors.border),
+          ),
+          textStyle: WidgetStateProperty.all(
+            const TextStyle(fontSize: 13, fontWeight: FontWeight.w800),
+          ),
+        ),
+        onSelectionChanged: (selected) => onChanged(selected.first),
       ),
     );
   }
@@ -1077,6 +1338,10 @@ class _SolicitacaoViagemInfo {
   bool get canInformarEntrega {
     return status == _SolicitacaoViagemStatus.aceita &&
         statusExecucao == _ExecucaoViagemStatus.emEntrega;
+  }
+
+  bool get isFinalizada {
+    return statusExecucao == _ExecucaoViagemStatus.concluida;
   }
 
   factory _SolicitacaoViagemInfo.fromMap(Map<String, dynamic> map) {
@@ -1253,7 +1518,7 @@ class _RoutePreviewCardState extends State<_RoutePreviewCard> {
     if (_mapboxAccessToken.isEmpty) {
       return _RoutePreviewData(
         destination: destination,
-        message: 'Token do Mapbox nao configurado.',
+        message: 'Rota detalhada indisponivel.',
       );
     }
 
@@ -1539,6 +1804,8 @@ class _RouteMiniMap extends StatelessWidget {
   final _RoutePreviewData data;
   final String mapboxAccessToken;
 
+  bool get _hasMapboxToken => mapboxAccessToken.trim().isNotEmpty;
+
   @override
   Widget build(BuildContext context) {
     final destination = data.destination!;
@@ -1566,12 +1833,18 @@ class _RouteMiniMap extends StatelessWidget {
         ),
       ),
       children: [
-        TileLayer(
-          urlTemplate:
-              'https://api.mapbox.com/styles/v1/mapbox/streets-v12/'
-              'tiles/256/{z}/{x}/{y}@2x?access_token=$mapboxAccessToken',
-          userAgentPackageName: 'br.com.glmcargas.app',
-        ),
+        if (_hasMapboxToken)
+          TileLayer(
+            urlTemplate:
+                'https://api.mapbox.com/styles/v1/mapbox/streets-v12/'
+                'tiles/256/{z}/{x}/{y}@2x?access_token=$mapboxAccessToken',
+            userAgentPackageName: 'br.com.glmcargas.app',
+          )
+        else
+          TileLayer(
+            urlTemplate: 'https://tile.openstreetmap.org/{z}/{x}/{y}.png',
+            userAgentPackageName: 'br.com.glmcargas.app',
+          ),
         if (hasRoute)
           PolylineLayer(
             polylines: [

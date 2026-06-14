@@ -86,6 +86,13 @@ class MenuLateral extends StatelessWidget {
                 },
               ),
               _itemMenu(
+                icon: Icons.assignment_turned_in_outlined,
+                label: 'Minhas Entregas',
+                onTap: () {
+                  Navigator.pushNamed(context, '/minhasEntregas');
+                },
+              ),
+              _itemMenu(
                 icon: Icons.person_outline,
                 label: 'Meu Perfil',
                 onTap: () {

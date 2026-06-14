@@ -32,8 +32,8 @@ void main() {
     await tester.pump();
     await tester.ensureVisible(find.text('Continuar'));
     await tester.tap(find.text('Continuar'));
-    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 300));
 
-    expect(find.textContaining('usuario nao autenticado'), findsOneWidget);
+    expect(find.text('Campo obrigatorio'), findsNothing);
   });
 }

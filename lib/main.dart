@@ -109,6 +109,11 @@ class MyApp extends StatelessWidget {
         '/home': (context) => AccessGate(
               approvedBuilder: (_) => const HomeMotoristaScreen(),
             ),
+        '/minhasEntregas': (context) => AccessGate(
+              approvedBuilder: (_) => const HomeMotoristaScreen(
+                mode: MotoristaHomeMode.minhasEntregas,
+              ),
+            ),
         '/perfilMotorista': (context) => AccessGate(
               approvedBuilder: (_) => const PerfilMotoristaScreen(),
             ),
