@@ -1,6 +1,6 @@
 # glmcargas_projeto
 
-Equipe: Luisa Scherer e Mathuesa de Brum Kruger
+Equipe: Luisa Scherer e Matheus de Brum Kruger
 
 Rodar web, com Chrome ou Edge
 
