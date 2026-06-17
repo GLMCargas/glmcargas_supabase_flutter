@@ -183,8 +183,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
         .from('Viagens')
         .select(
           'id, empresa, produto, origem_cidade, origem_uf, '
-          'destino_cidade, destino_uf, peso_texto, peso_exibicao, '
-          'valor, dimensoes, '
+          'destino_cidade, destino_uf, peso, peso_texto, valor, dimensoes, '
           'tipo_veiculo, tipo_carroceria, categoria_carga, '
           'compatibilidade_veiculo, '
           'data_limite_entrega, coleta_endereco, coleta_latitude, '
