@@ -16,6 +16,24 @@ void main() {
     expect(state.formatarValor('A combinar'), 'A combinar');
     expect(state.formatarPeso(900), '900 kg');
     expect(state.formatarPeso('12 ton'), '12 ton');
+    expect(
+      state.formatarPesoViagem({'peso_texto': '12 toneladas', 'peso': 0}),
+      '12 toneladas',
+    );
+    expect(
+      state.formatarCompatibilidadeVeiculo({
+        'compatibilidade_veiculo': 'Truck bau',
+        'tipo_veiculo': 'Truck',
+      }),
+      'Truck bau',
+    );
+    expect(
+      state.formatarCompatibilidadeVeiculo({
+        'tipo_veiculo': 'Toco',
+        'tipo_carroceria': 'Grade baixa',
+      }),
+      'Toco - Grade baixa',
+    );
     expect(state.inicialEmpresa('GLM Transportes'), 'G');
   });
 }

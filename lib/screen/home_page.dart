@@ -183,7 +183,9 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
         .from('Viagens')
         .select(
           'id, empresa, produto, origem_cidade, origem_uf, '
-          'destino_cidade, destino_uf, peso, valor, dimensoes, '
+          'destino_cidade, destino_uf, peso, peso_texto, valor, dimensoes, '
+          'tipo_veiculo, tipo_carroceria, categoria_carga, '
+          'compatibilidade_veiculo, '
           'data_limite_entrega, coleta_endereco, coleta_latitude, '
           'coleta_longitude, coleta_place_id, entrega_endereco, '
           'entrega_latitude, entrega_longitude, entrega_place_id',
@@ -627,6 +629,10 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
     return '$texto kg';
   }
 
+  String formatarPesoViagem(Map<String, dynamic> viagem) {
+    return formatarPeso(_firstNonEmpty([viagem['peso_texto'], viagem['peso']]));
+  }
+
   String formatarCompatibilidadeVeiculo(Map<String, dynamic> viagem) {
     const chavesCompatibilidade = [
       'compatibilidade_veiculo',
@@ -641,6 +647,27 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
         return texto;
       }
     }
+
+    final tipoVeiculo = _firstNonEmpty([
+      viagem['tipo_veiculo'],
+      viagem['tipoVeiculo'],
+    ]);
+    final tipoCarroceria = _firstNonEmpty([
+      viagem['tipo_carroceria'],
+      viagem['tipoCarroceria'],
+    ]);
+
+    if (tipoVeiculo != null && tipoCarroceria != null) {
+      return '$tipoVeiculo - $tipoCarroceria';
+    }
+
+    final fallback = _firstNonEmpty([
+      tipoVeiculo,
+      tipoCarroceria,
+      viagem['categoria_carga'],
+      viagem['categoriaCarga'],
+    ]);
+    if (fallback != null) return fallback;
 
     return '-';
   }
@@ -1121,7 +1148,7 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
                                       'Compatibilidade de veiculo',
                                       formatarCompatibilidadeVeiculo(v),
                                     ),
-                                    _detalhe('Peso', formatarPeso(v['peso'])),
+                                    _detalhe('Peso', formatarPesoViagem(v)),
                                     _detalhe(
                                       'Valor',
                                       formatarValor(v['valor']),
