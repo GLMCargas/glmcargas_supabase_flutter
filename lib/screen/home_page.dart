@@ -183,7 +183,8 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
         .from('Viagens')
         .select(
           'id, empresa, produto, origem_cidade, origem_uf, '
-          'destino_cidade, destino_uf, peso, peso_texto, valor, dimensoes, '
+          'destino_cidade, destino_uf, peso, peso_texto, peso_exibicao, '
+          'valor, dimensoes, '
           'tipo_veiculo, tipo_carroceria, categoria_carga, '
           'compatibilidade_veiculo, '
           'data_limite_entrega, coleta_endereco, coleta_latitude, '
@@ -630,7 +631,15 @@ class _HomeMotoristaScreenState extends State<HomeMotoristaScreen> {
   }
 
   String formatarPesoViagem(Map<String, dynamic> viagem) {
-    return formatarPeso(_firstNonEmpty([viagem['peso_texto'], viagem['peso']]));
+    return formatarPeso(
+      _firstNonEmpty([
+        viagem['peso_texto'],
+        viagem['pesoExibicao'],
+        viagem['peso_exibicao'],
+        viagem['peso_bruto'],
+        viagem['peso'],
+      ]),
+    );
   }
 
   String formatarCompatibilidadeVeiculo(Map<String, dynamic> viagem) {

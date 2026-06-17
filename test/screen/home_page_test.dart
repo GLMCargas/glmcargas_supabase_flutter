@@ -21,6 +21,10 @@ void main() {
       '12 toneladas',
     );
     expect(
+      state.formatarPesoViagem({'peso_exibicao': 'Carga leve'}),
+      'Carga leve',
+    );
+    expect(
       state.formatarCompatibilidadeVeiculo({
         'compatibilidade_veiculo': 'Truck bau',
         'tipo_veiculo': 'Truck',
