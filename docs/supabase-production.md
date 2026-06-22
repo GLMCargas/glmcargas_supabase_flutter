@@ -1,32 +1,44 @@
-# Supabase: separacao de dev e prod
+# Supabase e publicacao web
 
 ## Ambientes configurados
 
 - `dev`: `https://zabeesixaloyyhrsqqne.supabase.co`
 - `prod`: `https://zzwbnyajtdvmcumdlfoj.supabase.co`
 
-O app agora aceita tanto `anon key` quanto `publishable key`.
+O cliente Flutter aceita tanto chave publica `publishable` quanto `anon`.
 
-## Arquivos prontos
+## Arquivos de ambiente
 
 - `env/supabase.dev.json`
 - `env/supabase.prod.json`
 
-## Como rodar
+## Execucao local
 
-### Dev
+Desenvolvimento:
 
 ```bash
 flutter run -d chrome --dart-define-from-file=env/supabase.dev.json
 ```
 
-### Prod
+Producao:
 
 ```bash
 flutter run -d chrome --dart-define-from-file=env/supabase.prod.json
 ```
 
-## Observacao
+## Build e deploy de producao
 
-No cliente Flutter, a chave usada na inicializacao pode ser `publishable` ou
-`anon`, conforme a documentacao atual do Supabase.
+O deploy web deste repositorio e manual via Firebase Hosting.
+
+```bash
+flutter pub get
+flutter test
+flutter build web --release --dart-define-from-file=env/supabase.prod.json
+firebase login
+firebase deploy --only hosting
+```
+
+Referencias:
+
+- Projeto Firebase padrao: `glm-cargas-acd3d`
+- Pasta publicada: `build/web`
